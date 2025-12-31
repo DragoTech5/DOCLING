@@ -25,23 +25,19 @@ COPY telegram-mini-app/index.html ./telegram-mini-app/
 # Build frontend
 RUN cd telegram-mini-app && npm run build
 
-# Stage 2: Python runtime with FastAPI backend (using Alpine for smaller/faster builds)
-FROM python:3.11-alpine
+# Stage 2: Python runtime with FastAPI backend (using Debian slim for wheel compatibility)
+FROM python:3.11-slim
 
 WORKDIR /app
 
-# Install only essential system dependencies for Python packages (PostgreSQL client libs, SSH)
-# Alpine uses apk instead of apt-get; significantly smaller/faster than slim
-RUN apk add --no-cache \
-    gcc \
-    g++ \
-    make \
+# Install system dependencies for Python packages (PostgreSQL client libs, SSH, build tools)
+# Use single RUN command with proper apt caching to avoid timeouts
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
     postgresql-client \
     openssh-client \
     git \
-    libffi-dev \
-    openssl-dev \
-    musl-dev
+    && rm -rf /var/lib/apt/lists/*
 
 # Copy Python requirements and install dependencies
 COPY requirements.txt .
