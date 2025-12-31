@@ -64,6 +64,6 @@ EXPOSE 8200
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
     CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8200/health')" || exit 1
 
-# Use ENTRYPOINT to ensure uvicorn runs directly without shell wrapper
-ENTRYPOINT ["uvicorn"]
-CMD ["app.main:app", "--host", "0.0.0.0", "--port", "8200"]
+# Use shell form to support environment variable expansion
+# PORT defaults to 8200, HOST defaults to 0.0.0.0
+ENTRYPOINT sh -c 'uvicorn app.main:app --host ${HOST:-0.0.0.0} --port ${PORT:-8200}'
