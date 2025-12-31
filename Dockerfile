@@ -1,52 +1,61 @@
-# Multi-stage build for Docling Knowledge Hub + Telegram Mini App
-FROM python:3.11-slim as builder
+# Multi-stage build for Docling hybrid monorepo (Python backend + React/Node.js frontend)
+
+# Stage 1: Build frontend (Node.js/Vite)
+FROM node:22-alpine AS frontend-builder
 
 WORKDIR /app
 
-# Install build dependencies
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential \
-    && rm -rf /var/lib/apt/lists/*
+# Copy only package files first (for better cache)
+COPY telegram-mini-app/package.json telegram-mini-app/package-lock.json ./telegram-mini-app/
 
-# Install Python dependencies
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+# Install frontend dependencies
+RUN cd telegram-mini-app && npm ci --frozen-lockfile
 
-# Production stage
+# Copy frontend source
+COPY telegram-mini-app/src ./telegram-mini-app/src
+COPY telegram-mini-app/public ./telegram-mini-app/public
+COPY telegram-mini-app/tsconfig.json ./telegram-mini-app/
+COPY telegram-mini-app/vite.config.ts ./telegram-mini-app/
+COPY telegram-mini-app/tailwind.config.js ./telegram-mini-app/
+COPY telegram-mini-app/postcss.config.js ./telegram-mini-app/
+COPY telegram-mini-app/index.html ./telegram-mini-app/
+
+# Build frontend
+RUN cd telegram-mini-app && npm run build
+
+# Stage 2: Python runtime with FastAPI backend
 FROM python:3.11-slim
 
 WORKDIR /app
 
-# Install runtime dependencies only
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    curl \
-    postgresql-client \
+# Install system dependencies for Python packages (especially for psycopg2, PIL, etc.)
+RUN apt-get update && apt-get install -y \
+    gcc \
+    g++ \
+    make \
+    libpq-dev \
+    libssh-dev \
+    ssh \
+    git \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy Python packages from builder
-COPY --from=builder /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
-COPY --from=builder /usr/local/bin /usr/local/bin
+# Copy Python requirements and install dependencies
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy application code
-COPY . .
+# Copy backend source
+COPY app ./app
+COPY .env.railway .env
 
-# Install Node dependencies and build frontend
-RUN apt-get update && apt-get install -y --no-install-recommends nodejs npm \
-    && cd telegram-mini-app \
-    && npm ci --production=false \
-    && npm run build \
-    && cd .. \
-    && rm -rf telegram-mini-app/node_modules \
-    && apt-get remove -y nodejs npm \
-    && apt-get autoremove -y \
-    && rm -rf /var/lib/apt/lists/*
-
-# Health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
-  CMD curl -f http://localhost:8200/health || exit 1
+# Copy built frontend from stage 1
+COPY --from=frontend-builder /app/telegram-mini-app/dist ./app/static/twa
 
 # Expose port
 EXPOSE 8200
 
-# Run application
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8200/health')" || exit 1
+
+# Run FastAPI with uvicorn
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8200"]

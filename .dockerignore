@@ -1,0 +1,86 @@
+# Git and version control
+.git
+.gitignore
+.gitignore.deployment
+
+# Development
+.vscode
+.idea
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# Python
+__pycache__
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.venv
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+
+# Node/Frontend
+node_modules/
+npm-debug.log
+.next/
+out/
+.cache/
+telegram-mini-app/dist/
+telegram-mini-app/build/
+
+# Environment files (don't include secrets)
+.env
+.env.local
+.env.railway
+.env.*.local
+
+# Logs and temp
+*.log
+logs/
+*.bak
+*.backup
+*.sql.gz
+
+# Build artifacts
+.mcp-browser-only.json
+e2e-test-results/
+data/
+
+# Documentation and misc
+docs/
+README.md
+CLAUDE.md
+DEVELOPMENT_HANDOFF_SUMMARY.md
+
+# Tests and coverage
+tests/
+.coverage
+coverage/
+pytest.ini
+
+# MCP and tools
+.claude/
+.mcp.json
+.playwright-mcp/
+mcp/
+
+# Scripts
+scripts/
+activate.sh
+run.sh
+setup_firewall.sh
+
+# Docker files to exclude
+docker-compose.yml
+Dockerfile
+.dockerignore
+
+# Large files
+*.tar.gz
+*.zip
