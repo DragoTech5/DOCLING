@@ -97,6 +97,7 @@ export default function MysticalTeaserCard() {
           line-height: 1.7;
           color: rgba(226, 232, 240, 0.85);
           letter-spacing: 0.01em;
+          text-align: center;
         }
 
         .content-reveal {

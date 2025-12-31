@@ -28,6 +28,15 @@ export default function HomePage() {
         {/* Background glow effect */}
         <div className="absolute inset-0 bg-gradient-to-b from-cyan-500/8 to-transparent pointer-events-none" />
 
+        {/* Logo */}
+        <div className="flex justify-center mb-4">
+          <img
+            src="/Logo-.png"
+            alt="Akasha AI Logo"
+            className="w-32 h-32 object-contain drop-shadow-lg opacity-95 hover:opacity-100 transition-opacity"
+          />
+        </div>
+
         <h1 className="text-3xl font-bold text-cyan-300 text-glow-strong mb-2">
           Akasha AI
         </h1>
