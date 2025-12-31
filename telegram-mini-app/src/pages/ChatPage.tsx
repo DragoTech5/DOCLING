@@ -500,6 +500,7 @@ export default function ChatPage() {
   const [shareUrl, setShareUrl] = useState<string | null>(null)
   const [isSharing, setIsSharing] = useState(false)
   const [shareError, setShareError] = useState<string | null>(null)
+  const [shareCopiedNotification, setShareCopiedNotification] = useState(false)
   const [isDocumentsExpanded, setIsDocumentsExpanded] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
@@ -667,7 +668,19 @@ export default function ChatPage() {
       const data = await response.json()
       const url = data.shareUrl
       setShareUrl(url)
-      hapticFeedback('success')
+
+      // Auto-copy to clipboard
+      navigator.clipboard.writeText(url).then(() => {
+        console.log('✅ Share link copied to clipboard:', url)
+        hapticFeedback('success')
+        // Show notification
+        setShareCopiedNotification(true)
+        // Hide notification after 3 seconds
+        setTimeout(() => setShareCopiedNotification(false), 3000)
+      }).catch(() => {
+        console.error('Failed to copy to clipboard')
+        hapticFeedback('light')
+      })
     } catch (err) {
       console.error('Error sharing conversation:', err)
       setShareError('Failed to share conversation')
@@ -918,6 +931,30 @@ export default function ChatPage() {
         </div>
       )}
 
+      {/* Share copied notification */}
+      {shareCopiedNotification && (
+        <div style={{
+          position: 'fixed',
+          top: '12px',
+          left: '12px',
+          right: '12px',
+          background: 'rgba(34, 197, 94, 0.2)',
+          border: '1px solid rgba(34, 197, 94, 0.5)',
+          color: '#86efac',
+          padding: '12px 16px',
+          borderRadius: '8px',
+          zIndex: 9999,
+          fontSize: '14px',
+          boxShadow: '0 2px 8px rgba(34, 197, 94, 0.3)',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px'
+        }}>
+          <span>✓</span>
+          Share link copied to clipboard!
+        </div>
+      )}
+
       {/* Header - Fixed position to ensure visibility */}
       <header style={{
         position: 'fixed',
@@ -1012,12 +1049,12 @@ export default function ChatPage() {
                   <button
                     onClick={() => {
                       hapticFeedback('light')
-                      setShowShareModal(true)
                       handleShareConversation()
                     }}
-                    className="px-3 py-1.5 bg-tg-button text-tg-button-text rounded-lg text-sm font-medium hover:opacity-90 transition-opacity"
+                    disabled={isSharing}
+                    className="px-3 py-1.5 bg-tg-button text-tg-button-text rounded-lg text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-60"
                   >
-                    Share
+                    {isSharing ? 'Sharing...' : 'Share'}
                   </button>
                 </>
               )}

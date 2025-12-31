@@ -1367,8 +1367,10 @@ async def share_conversation(
     if not share_token:
         raise HTTPException(status_code=404, detail="Saved conversation not found")
 
-    # Construct share URL (will be adjusted based on actual deployment URL)
-    share_url = f"/twa/share/{share_token}"
+    # Get public TWA URL from environment, default to Cloudflare tunnel URL
+    twa_public_url = os.getenv("TWA_PUBLIC_URL", "https://select-signature-lloyd-trails.trycloudflare.com/twa")
+    # Construct absolute share URL
+    share_url = f"{twa_public_url}/share/{share_token}"
 
     return {
         "shareToken": share_token,
