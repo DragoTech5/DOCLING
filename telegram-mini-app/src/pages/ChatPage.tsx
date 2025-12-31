@@ -572,6 +572,18 @@ export default function ChatPage() {
         return
       }
 
+      // Parse response to get the saved conversation ID
+      const savedData = await response.json()
+      console.log('💾 Conversation saved with ID:', savedData.id)
+
+      // Update currentConversation with the new ID so sharing works
+      if (currentConversation) {
+        setCurrentConversation({
+          ...currentConversation,
+          id: savedData.id  // Replace 'new-' ID with actual saved ID
+        })
+      }
+
       // Show success message
       hapticFeedback('success')
       setShowSuccess(true)
@@ -934,6 +946,19 @@ export default function ChatPage() {
                             setSaveError(errorData.detail || 'Failed to save conversation')
                             return
                           }
+
+                          // Parse response to get the saved conversation ID
+                          const savedData = await response.json()
+                          console.log('💾 Conversation saved with ID:', savedData.id)
+
+                          // Update currentConversation with the new ID so sharing works
+                          if (currentConversation) {
+                            setCurrentConversation({
+                              ...currentConversation,
+                              id: savedData.id  // Replace 'new-' ID with actual saved ID
+                            })
+                          }
+
                           hapticFeedback('success')
                           setShowSuccess(true)
                           setTimeout(() => setShowSuccess(false), 2000)
