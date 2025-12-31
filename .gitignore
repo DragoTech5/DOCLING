@@ -49,3 +49,4 @@ telegram-mini-app/build/
 *.bak
 *.backup
 *.sql.gz
+data/knowledge_hub.db
