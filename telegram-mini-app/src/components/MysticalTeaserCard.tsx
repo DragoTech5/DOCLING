@@ -61,6 +61,7 @@ export default function MysticalTeaserCard() {
           font-size: 1.5rem;
           font-weight: 700;
           letter-spacing: 0.05em;
+          text-align: center;
           background: linear-gradient(120deg, #22d3ee 0%, #a855f7 50%, #22d3ee 100%);
           background-size: 200% auto;
           -webkit-background-clip: text;
@@ -79,6 +80,7 @@ export default function MysticalTeaserCard() {
           font-size: 0.75rem;
           letter-spacing: 0.15em;
           text-transform: uppercase;
+          text-align: center;
           color: rgba(168, 85, 247, 0.7);
           margin-top: 0.5rem;
         }
@@ -145,8 +147,8 @@ export default function MysticalTeaserCard() {
         {/* Content wrapper */}
         <div className="relative z-20">
           {/* Teaser Section - Always Visible */}
-          <div className="flex items-start justify-between gap-4">
-            <div className="flex-1">
+          <div className="flex flex-col items-center justify-center">
+            <div className="w-full">
               <h2 className="teaser-title">
                 The Knowledge They Try to Hide
               </h2>
@@ -155,12 +157,12 @@ export default function MysticalTeaserCard() {
                 Uncensored • Unfiltered • Forbidden
                 <span className="occult-symbol">◆</span>
               </p>
-              <p className="text-gray-400 text-sm mt-3 leading-relaxed">
+              <p className="text-gray-400 text-sm mt-3 leading-relaxed text-center">
                 9,000+ books on <span className="knowledge-highlight">occult wisdom</span>, <span className="knowledge-highlight">esoteric secrets</span>, and <span className="knowledge-highlight">hidden truths</span>
               </p>
             </div>
             <svg
-              className={`expand-icon ${isExpanded ? 'expanded' : ''} w-6 h-6 text-cyan-400 flex-shrink-0 mt-1`}
+              className={`expand-icon ${isExpanded ? 'expanded' : ''} w-6 h-6 text-cyan-400 mt-3`}
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
