@@ -200,7 +200,7 @@ export default function PricingPage() {
                 </ul>
 
                 {/* Action button */}
-                {isUpgrade && (
+                {isUpgrade && tier !== 'free' && (
                   <button
                     onClick={() => handleSubscribe(tier)}
                     disabled={isProcessing}
