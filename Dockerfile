@@ -16,6 +16,7 @@ RUN cd telegram-mini-app && npm ci --frozen-lockfile
 COPY telegram-mini-app/src ./telegram-mini-app/src
 COPY telegram-mini-app/public ./telegram-mini-app/public
 COPY telegram-mini-app/tsconfig.json ./telegram-mini-app/
+COPY telegram-mini-app/tsconfig.node.json ./telegram-mini-app/
 COPY telegram-mini-app/vite.config.ts ./telegram-mini-app/
 COPY telegram-mini-app/tailwind.config.js ./telegram-mini-app/
 COPY telegram-mini-app/postcss.config.js ./telegram-mini-app/
