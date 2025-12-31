@@ -31,7 +31,7 @@ export default function HomePage() {
         {/* Logo */}
         <div className="flex justify-center mb-4">
           <img
-            src="/akasha-logo.png"
+            src="./akasha-logo.png"
             alt="Akasha AI Logo"
             className="w-32 h-32 object-contain drop-shadow-lg opacity-95 hover:opacity-100 transition-opacity"
           />
