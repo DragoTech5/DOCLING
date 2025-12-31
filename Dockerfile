@@ -66,4 +66,4 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
 
 # Use shell form to support environment variable expansion
 # PORT defaults to 8200, HOST defaults to 0.0.0.0
-ENTRYPOINT sh -c 'uvicorn app.main:app --host ${HOST:-0.0.0.0} --port ${PORT:-8200}'
+ENTRYPOINT sh -c "uvicorn app.main:app --host \${HOST:-0.0.0.0} --port \${PORT:-8200}"
