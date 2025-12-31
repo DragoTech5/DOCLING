@@ -873,7 +873,7 @@ export default function ChatPage() {
       )}
 
       {/* Header */}
-      <header className="bg-tg-header border-b border-tg-hint/20 px-4 py-3">
+      <header className="sticky top-0 z-10 bg-tg-header border-b border-tg-hint/20 px-4 py-3">
         <div className="flex flex-col gap-3">
           {/* Title and buttons row */}
           <div className="flex items-center gap-3">
