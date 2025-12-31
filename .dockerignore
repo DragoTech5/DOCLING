@@ -76,9 +76,8 @@ activate.sh
 run.sh
 setup_firewall.sh
 
-# Docker files to exclude
+# Docker files to exclude (but NOT Dockerfile - it's needed for the build!)
 docker-compose.yml
-Dockerfile
 .dockerignore
 
 # Large files
