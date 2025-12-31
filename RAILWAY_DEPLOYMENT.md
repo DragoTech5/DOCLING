@@ -27,8 +27,8 @@ Current Host Databases (temporary, will migrate to NAS)
 ## Prerequisites
 
 - ✅ GitHub account (linked to Railway - already done)
-- ✅ OpenAI API key (configured: `sk-ikHVclNWz1q3amvp...`)
-- ✅ Telegram bot credentials (DoclingKB_bot, token: `7969287253:AAEk...`)
+- ✅ OpenAI API key (set in Railway Secrets)
+- ✅ Telegram bot credentials (set in Railway Secrets)
 - ✅ Docker image ready (Dockerfile in root)
 - ✅ Railway project ready (you created it via dashboard)
 
