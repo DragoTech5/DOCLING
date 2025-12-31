@@ -999,7 +999,12 @@ def _extract_cited_sources(response_text: str, all_sources: list[Source]) -> lis
         if 0 <= source_index < len(unique_sources):
             cited_sources.append(unique_sources[source_index])
 
-    # If no citations found in response, return empty list (sources should only appear if cited)
+    # Fallback: if no valid citations found, return all unique sources
+    # This prevents hallucinated sources by showing what was actually retrieved
+    if not cited_sources and unique_sources:
+        logger.warning(f"[SOURCES] No valid citations found in response (citations: {cited_indices}, sources: {len(unique_sources)}). Returning all retrieved sources as fallback.")
+        return unique_sources
+
     logger.info(f"[SOURCES] Extracted {len(cited_sources)} cited sources from response with citations: {cited_indices}")
     return cited_sources
 

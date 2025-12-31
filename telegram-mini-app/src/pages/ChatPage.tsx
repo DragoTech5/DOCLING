@@ -851,7 +851,7 @@ export default function ChatPage() {
   }
 
   return (
-    <div className="flex flex-col h-screen bg-tg-bg">
+    <div className="flex flex-col h-screen bg-tg-bg overflow-hidden">
       {/* Success toast */}
       {saveSuccess && (
         <div style={{
@@ -872,8 +872,20 @@ export default function ChatPage() {
         </div>
       )}
 
-      {/* Header */}
-      <header className="sticky top-0 z-10 bg-tg-header border-b border-tg-hint/20 px-4 py-3">
+      {/* Header - Fixed position to ensure visibility */}
+      <header style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        zIndex: 50,
+        backgroundColor: 'var(--tg-theme-bg-color, #0f1419)',
+        borderBottomWidth: '1px',
+        borderBottomColor: 'rgba(107, 114, 128, 0.2)',
+        padding: '12px 16px',
+        maxHeight: '120px',
+        overflowY: 'auto'
+      }} className="bg-tg-header border-b border-tg-hint/20">
         <div className="flex flex-col gap-3">
           {/* Title and buttons row */}
           <div className="flex items-center gap-3">
@@ -941,8 +953,8 @@ export default function ChatPage() {
         </div>
       </header>
 
-      {/* Messages */}
-      <main className="flex-1 overflow-y-auto px-4 py-4 chat-scrollbar">
+      {/* Messages - accounts for fixed header */}
+      <main style={{ marginTop: '120px' }} className="flex-1 overflow-y-auto px-4 py-4 chat-scrollbar">
         {currentConversation?.messages.length === 0 && (
           <div className="text-center py-8">
             <p className="text-tg-hint text-sm mb-2">Start a conversation!</p>
