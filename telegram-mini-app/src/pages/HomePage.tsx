@@ -3,6 +3,7 @@ import { useAuthStore } from '@/stores/authStore'
 import BottomNav from '@/components/BottomNav'
 import SavedConversationsCard from '@/components/SavedConversationsCard'
 import MysticalTeaserCard from '@/components/MysticalTeaserCard'
+import akashaLogo from '@/../public/akasha-logo.png'
 
 export default function HomePage() {
   const navigate = useNavigate()
@@ -31,7 +32,7 @@ export default function HomePage() {
         {/* Logo */}
         <div className="flex justify-center mb-4">
           <img
-            src="./akasha-logo.png"
+            src={akashaLogo}
             alt="Akasha AI Logo"
             className="w-32 h-32 object-contain drop-shadow-lg opacity-95 hover:opacity-100 transition-opacity"
           />
