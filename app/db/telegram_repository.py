@@ -38,6 +38,9 @@ def get_dev_whitelist() -> set[int]:
 
 def is_dev_whitelisted(telegram_id: int) -> bool:
     """Check if a Telegram user ID is in the dev whitelist."""
+    # Exclude test admin user (Ares) if TEST_ADMIN_AS_FREE is set
+    if os.getenv("TEST_ADMIN_AS_FREE") == "true" and telegram_id == 1069852438:
+        return False
     return telegram_id in get_dev_whitelist()
 
 
