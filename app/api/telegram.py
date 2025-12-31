@@ -92,7 +92,7 @@ class SendMessageRequest(BaseModel):
 
 class SubscribeRequest(BaseModel):
     """Request to create subscription invoice."""
-    tier: str = Field(..., pattern="^(starter|pro|business|enterprise)$")
+    tier: str = Field(..., pattern="^(starter|pro|unlimited|business|enterprise|scholar|researcher)$")
 
 
 class PurchaseTokensRequest(BaseModel):

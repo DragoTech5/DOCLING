@@ -229,7 +229,7 @@ class AnalyticsConversionFunnelRecord(TypedDict):
 
 
 # Subscription tier constants
-SubscriptionTier = Literal["free", "starter", "pro", "business", "enterprise"]
+SubscriptionTier = Literal["free", "starter", "pro", "unlimited", "business", "enterprise", "scholar", "researcher"]
 
 # Tier limits configuration - Knowledge Archive TWA
 # Note: Using daily_queries instead of monthly_queries for the new system
@@ -306,16 +306,6 @@ TIER_LIMITS = {
         "payment_method": "telegram_stars",
     },
     "business": {
-        "max_pdfs": None,
-        "daily_queries": None,
-        "monthly_queries": None,
-        "max_saved_conversations": None,
-        "history_days": None,
-        "price_stars": 5777,
-        "price_usd": 9999,
-        "payment_method": "telegram_stars",
-    },
-    "enterprise": {
         "max_pdfs": None,
         "daily_queries": None,
         "monthly_queries": None,

@@ -393,9 +393,9 @@ def require_query_credits():
                 detail="User not found in database",
             )
 
-        # Check if user has unlimited queries (enterprise tier)
+        # Check if user has unlimited queries (enterprise or unlimited tier)
         tier = user.db_record.get("tier", "free")
-        if tier == "enterprise":
+        if tier in ("enterprise", "unlimited"):
             return user
 
         # Check remaining credits
