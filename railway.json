@@ -1,4 +1,7 @@
 {
+  "build": {
+    "buildCommand": "cd telegram-mini-app && npm install && npm run build && cd .. && pip install -r requirements.txt"
+  },
   "deploy": {
     "numReplicas": 1,
     "restartPolicy": "always",
