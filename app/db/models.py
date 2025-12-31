@@ -585,6 +585,14 @@ CREATE TABLE IF NOT EXISTS saved_conversation_documents (
     added_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
+-- Conversation shares (for sharing any conversation, saved or unsaved)
+CREATE TABLE IF NOT EXISTS conversation_shares (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    conversation_id INTEGER NOT NULL REFERENCES tg_conversations(id) ON DELETE CASCADE,
+    share_token TEXT UNIQUE NOT NULL,  -- UUID for public sharing
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
 -- Indexes for Telegram tables
 CREATE INDEX IF NOT EXISTS idx_telegram_users_telegram_id ON telegram_users(telegram_id);
 CREATE INDEX IF NOT EXISTS idx_subscriptions_user ON subscriptions(telegram_user_id);
@@ -599,6 +607,10 @@ CREATE INDEX IF NOT EXISTS idx_saved_conversations_user ON saved_conversations(t
 CREATE INDEX IF NOT EXISTS idx_saved_conversations_share_token ON saved_conversations(share_token);
 CREATE INDEX IF NOT EXISTS idx_saved_conversations_created ON saved_conversations(created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_saved_conversation_documents ON saved_conversation_documents(saved_conversation_id);
+
+-- Indexes for conversation shares
+CREATE INDEX IF NOT EXISTS idx_conversation_shares_token ON conversation_shares(share_token);
+CREATE INDEX IF NOT EXISTS idx_conversation_shares_conversation ON conversation_shares(conversation_id);
 
 -- Triggers for Telegram tables
 CREATE TRIGGER IF NOT EXISTS update_telegram_users_timestamp

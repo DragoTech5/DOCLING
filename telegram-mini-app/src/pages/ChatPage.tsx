@@ -602,8 +602,8 @@ export default function ChatPage() {
 
   // Handle sharing conversation
   const handleShareConversation = async () => {
-    if (!currentConversation?.id || currentConversation.id.startsWith('new-')) {
-      setShareError('Please save the conversation first')
+    if (!currentConversation?.id) {
+      setShareError('No active conversation')
       return
     }
 
@@ -612,7 +612,8 @@ export default function ChatPage() {
       setShareError(null)
       setShareUrl(null)
 
-      const response = await fetch(`/api/telegram/saved-conversations/${currentConversation.id}/share`, {
+      // Works for both saved and unsaved conversations
+      const response = await fetch(`/api/telegram/conversations/${currentConversation.id}/share`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -622,8 +623,10 @@ export default function ChatPage() {
 
       if (!response.ok) {
         const errorData = await response.json()
-        if (response.status === 404) {
-          setShareError('Conversation not found. Please save it first.')
+        if (response.status === 403) {
+          setShareError('Access denied. Conversation not found.')
+        } else if (response.status === 404) {
+          setShareError('Conversation not found')
         } else {
           setShareError(errorData.detail || 'Failed to share conversation')
         }

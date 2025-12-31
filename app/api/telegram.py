@@ -13,16 +13,18 @@ from __future__ import annotations
 
 import json
 import os
+import uuid
 from datetime import datetime, timedelta
 from typing import Annotated, Optional
 
+import aiosqlite
 import httpx
 from fastapi import APIRouter, HTTPException, Depends, Query, Request
 from fastapi.responses import StreamingResponse, JSONResponse
 from pydantic import BaseModel, Field
 
 from app.db import telegram_repository as tg_repo
-from app.db.models import TIER_LIMITS
+from app.db.models import TIER_LIMITS, get_db_path
 from app.middleware.telegram_auth import (
     TelegramUser,
     get_current_telegram_user,
@@ -1345,6 +1347,61 @@ async def delete_saved_conversation(
     return {"success": True}
 
 
+@router.post("/conversations/{conversation_id}/share", response_model=ShareConversationResponse)
+async def share_any_conversation(
+    conversation_id: str,
+    user: TelegramUser = Depends(get_current_telegram_user),
+):
+    """
+    Enable public sharing for any conversation (saved or unsaved).
+
+    Works for both:
+    - Saved conversations (with numeric IDs)
+    - Unsaved conversations (with 'new-' prefix or numeric tg_conversation IDs)
+
+    Returns share token and public URL.
+    User must own the conversation.
+    """
+    if not user.db_record:
+        raise HTTPException(status_code=500, detail="Database error")
+
+    try:
+        # Convert conversation_id to integer (handles both numeric and 'new-' IDs)
+        if conversation_id.startswith("new-"):
+            # Extract numeric ID from 'new-XXXXX' format
+            conv_id = int(conversation_id.split("-")[1])
+        else:
+            conv_id = int(conversation_id)
+
+        # Verify user owns this conversation
+        async with aiosqlite.connect(get_db_path()) as db:
+            cursor = await db.execute(
+                "SELECT id FROM tg_conversations WHERE id = ? AND telegram_user_id = ?",
+                (conv_id, user.db_record["id"]),
+            )
+            result = await cursor.fetchone()
+            if not result:
+                raise HTTPException(status_code=403, detail="Conversation not found or access denied")
+
+        # Generate share token
+        share_token = str(uuid.uuid4())
+
+        # Create conversation share
+        success = await tg_repo.create_conversation_share(conv_id, share_token)
+        if not success:
+            raise HTTPException(status_code=500, detail="Failed to create share link")
+
+        # Construct share URL
+        share_url = f"/twa/share/{share_token}"
+
+        return {
+            "shareToken": share_token,
+            "shareUrl": share_url,
+        }
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid conversation ID")
+
+
 @router.post("/saved-conversations/{saved_conversation_id}/share", response_model=ShareConversationResponse)
 async def share_conversation(
     saved_conversation_id: str,
@@ -1384,9 +1441,16 @@ async def view_shared_conversation(
     """
     View shared conversation (public endpoint, no authentication required).
 
-    Returns conversation if it's marked as public.
+    Works for both:
+    - Saved conversations (marked as public)
+    - Unsaved conversations (with share token)
     """
+    # Try saved conversation first
     conv = await tg_repo.get_saved_conversation_by_share_token(share_token)
+
+    # If not found, try unsaved conversation share
+    if not conv:
+        conv = await tg_repo.get_conversation_by_share_token(share_token)
 
     if not conv:
         raise HTTPException(status_code=404, detail="Shared conversation not found or expired")
