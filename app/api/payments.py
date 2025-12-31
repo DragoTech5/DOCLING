@@ -144,13 +144,17 @@ async def handle_dodo_webhook(
     event_type = event.get("type")
     logger.info(f"Dodo webhook received: {event_type} (ID: {webhook_id})")
 
-    # Handle payment.completed event
-    if event_type == "payment.completed":
+    # Handle payment success events (DODO sends "payment.succeeded")
+    if event_type in ["payment.completed", "payment.succeeded"]:
         await _handle_payment_completed(event)
 
     # Handle payment.failed event
     elif event_type == "payment.failed":
         await _handle_payment_failed(event)
+
+    # Handle payment.cancelled event (optional - for tracking)
+    elif event_type == "payment.cancelled":
+        logger.info(f"Payment cancelled: {event.get('data', {}).get('checkoutSessionId')}")
 
     # Acknowledge receipt
     return {"status": "received"}
