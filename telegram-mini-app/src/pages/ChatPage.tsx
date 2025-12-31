@@ -602,8 +602,8 @@ export default function ChatPage() {
 
   // Handle sharing conversation
   const handleShareConversation = async () => {
-    if (!currentConversation?.id) {
-      setShareError('No active conversation')
+    if (!currentConversation?.id || !currentConversation.messages || currentConversation.messages.length === 0) {
+      setShareError('No messages to share')
       return
     }
 
@@ -612,8 +612,41 @@ export default function ChatPage() {
       setShareError(null)
       setShareUrl(null)
 
-      // Works for both saved and unsaved conversations
-      const response = await fetch(`/api/telegram/conversations/${currentConversation.id}/share`, {
+      // If conversation is unsaved (starts with 'new-'), save it first
+      let conversationIdToShare = currentConversation.id
+      if (currentConversation.id.startsWith('new-')) {
+        console.log('Conversation unsaved, auto-saving before sharing...')
+        const title = currentConversation.messages[0]?.content?.slice(0, 50) + '...' || 'Untitled Chat'
+        const saveResponse = await fetch('/api/telegram/saved-conversations', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Telegram-Init-Data': `user=${profile?.telegramId}`,
+          },
+          body: JSON.stringify({
+            conversationId: currentConversation.id,
+            title,
+            selectedDocIds: selectedPdfIds,
+          }),
+        })
+
+        if (!saveResponse.ok) {
+          const errorData = await saveResponse.json()
+          setShareError(errorData.detail || 'Failed to save conversation before sharing')
+          return
+        }
+
+        const savedData = await saveResponse.json()
+        conversationIdToShare = savedData.id
+        // Update conversation ID so subsequent operations use the saved ID
+        setCurrentConversation({
+          ...currentConversation,
+          id: conversationIdToShare,
+        })
+      }
+
+      // Now share the conversation (saved or already was saved)
+      const response = await fetch(`/api/telegram/saved-conversations/${conversationIdToShare}/share`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -623,10 +656,8 @@ export default function ChatPage() {
 
       if (!response.ok) {
         const errorData = await response.json()
-        if (response.status === 403) {
-          setShareError('Access denied. Conversation not found.')
-        } else if (response.status === 404) {
-          setShareError('Conversation not found')
+        if (response.status === 404) {
+          setShareError('Conversation not found. Please save it first.')
         } else {
           setShareError(errorData.detail || 'Failed to share conversation')
         }

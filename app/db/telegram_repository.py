@@ -5,10 +5,13 @@ Telegram Mini App Repository - CRUD operations for Telegram users, subscriptions
 from __future__ import annotations
 
 import json
+import logging
 import os
 from datetime import datetime, timedelta
 
 import aiosqlite
+
+logger = logging.getLogger(__name__)
 
 from app.db.models import (
     TelegramUserRecord,
@@ -769,85 +772,6 @@ async def count_saved_conversations(telegram_user_id: int) -> int:
         )
         result = await cursor.fetchone()
         return result[0] if result else 0
-
-
-# ============================================================================
-# Conversation Sharing (unsaved conversations)
-# ============================================================================
-
-
-async def create_conversation_share(conversation_id: int, share_token: str) -> bool:
-    """Create a share token for any conversation (saved or unsaved)."""
-    async with aiosqlite.connect(get_db_path()) as db:
-        try:
-            await db.execute(
-                "INSERT INTO conversation_shares (conversation_id, share_token) VALUES (?, ?)",
-                (conversation_id, share_token),
-            )
-            await db.commit()
-            return True
-        except Exception as e:
-            logger.error(f"Error creating conversation share: {e}")
-            return False
-
-
-async def get_conversation_by_share_token(share_token: str) -> dict | None:
-    """Get conversation data by share token (public access)."""
-    async with aiosqlite.connect(get_db_path()) as db:
-        db.row_factory = aiosqlite.Row
-
-        # Get conversation from conversation_shares
-        cursor = await db.execute(
-            "SELECT conversation_id FROM conversation_shares WHERE share_token = ?",
-            (share_token,),
-        )
-        share_record = await cursor.fetchone()
-        if not share_record:
-            return None
-
-        conversation_id = share_record["conversation_id"]
-
-        # Get conversation details
-        cursor = await db.execute(
-            "SELECT id, title FROM tg_conversations WHERE id = ?",
-            (conversation_id,),
-        )
-        conv = await cursor.fetchone()
-        if not conv:
-            return None
-
-        conv_dict = dict(conv)
-
-        # Get messages
-        cursor = await db.execute(
-            """SELECT id, role, content, sources, created_at FROM tg_messages
-               WHERE conversation_id = ?
-               ORDER BY created_at ASC""",
-            (conversation_id,),
-        )
-        messages = []
-        for row in await cursor.fetchall():
-            msg = dict(row)
-            msg["sources"] = json.loads(msg.get("sources") or "[]")
-            messages.append(msg)
-
-        # Get documents (if saved conversation)
-        documents = []
-        cursor = await db.execute(
-            """SELECT scd.document_id FROM saved_conversation_documents scd
-               JOIN saved_conversations sc ON scd.saved_conversation_id = sc.id
-               WHERE sc.conversation_id = ?
-               ORDER BY scd.added_at ASC""",
-            (conversation_id,),
-        )
-        for row in await cursor.fetchall():
-            documents.append(dict(row))
-
-        return {
-            **conv_dict,
-            "messages": messages,
-            "documents": documents,
-        }
 
 
 # ============================================================================
