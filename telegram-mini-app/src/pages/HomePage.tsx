@@ -3,7 +3,7 @@ import { useAuthStore } from '@/stores/authStore'
 import BottomNav from '@/components/BottomNav'
 import SavedConversationsCard from '@/components/SavedConversationsCard'
 import MysticalTeaserCard from '@/components/MysticalTeaserCard'
-import akashaLogo from '@/../public/akasha-logo.png'
+import akashaLogo from '@/../public/logo-new.png'
 
 export default function HomePage() {
   const navigate = useNavigate()
