@@ -1,5 +1,5 @@
 # Multi-stage build for Docling hybrid monorepo (Python backend + React/Node.js frontend)
-# Retry: Attempting deployment again to resolve transient infrastructure issues (exit code 137)
+# Optimization: Use Alpine Linux to avoid transient infrastructure timeouts during apt-get
 
 # Stage 1: Build frontend (Node.js/Vite)
 FROM node:22-alpine AS frontend-builder
@@ -24,21 +24,23 @@ COPY telegram-mini-app/index.html ./telegram-mini-app/
 # Build frontend
 RUN cd telegram-mini-app && npm run build
 
-# Stage 2: Python runtime with FastAPI backend
-FROM python:3.11-slim
+# Stage 2: Python runtime with FastAPI backend (using Alpine for smaller/faster builds)
+FROM python:3.11-alpine
 
 WORKDIR /app
 
-# Install system dependencies for Python packages (especially for psycopg2, PIL, etc.)
-RUN apt-get update && apt-get install -y \
+# Install only essential system dependencies for Python packages (PostgreSQL client libs, SSH)
+# Alpine uses apk instead of apt-get; significantly smaller/faster than slim
+RUN apk add --no-cache \
     gcc \
     g++ \
     make \
-    libpq-dev \
-    libssh-dev \
-    ssh \
+    postgresql-client \
+    openssh-client \
     git \
-    && rm -rf /var/lib/apt/lists/*
+    libffi-dev \
+    openssl-dev \
+    musl-dev
 
 # Copy Python requirements and install dependencies
 COPY requirements.txt .
