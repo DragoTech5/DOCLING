@@ -907,13 +907,48 @@ export default function ChatPage() {
               {currentConversation?.messages && currentConversation.messages.length > 0 && profile?.tier !== 'free' && (
                 <>
                   <button
-                    onClick={() => {
+                    onClick={async () => {
                       hapticFeedback('light')
-                      setShowSaveModal(true)
+                      // Auto-generate title from first message without showing modal
+                      if (currentConversation?.messages && currentConversation.messages.length > 0) {
+                        setSaveTitle(currentConversation.messages[0]?.content?.slice(0, 50) + '...' || 'Untitled Chat')
+                        // Call save directly after setting title
+                        setIsSavingConversation(true)
+                        setSaveError(null)
+                        try {
+                          const title = currentConversation.messages[0]?.content?.slice(0, 50) + '...' || 'Untitled Chat'
+                          const response = await fetch('/api/telegram/saved-conversations', {
+                            method: 'POST',
+                            headers: {
+                              'Content-Type': 'application/json',
+                              'X-Telegram-Init-Data': `user=${profile?.telegramId}`,
+                            },
+                            body: JSON.stringify({
+                              conversationId: currentConversation.id,
+                              title,
+                              selectedDocIds: selectedPdfIds,
+                            }),
+                          })
+                          if (!response.ok) {
+                            const errorData = await response.json()
+                            setSaveError(errorData.detail || 'Failed to save conversation')
+                            return
+                          }
+                          hapticFeedback('success')
+                          setShowSuccess(true)
+                          setTimeout(() => setShowSuccess(false), 2000)
+                        } catch (err) {
+                          console.error('Error saving conversation:', err)
+                          setSaveError('Failed to save conversation')
+                        } finally {
+                          setIsSavingConversation(false)
+                        }
+                      }
                     }}
-                    className="px-3 py-1.5 bg-tg-button text-tg-button-text rounded-lg text-sm font-medium hover:opacity-90 transition-opacity"
+                    disabled={isSavingConversation}
+                    className="px-3 py-1.5 bg-tg-button text-tg-button-text rounded-lg text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-60"
                   >
-                    Save
+                    {isSavingConversation ? 'Saving...' : 'Save'}
                   </button>
                   <button
                     onClick={() => {
