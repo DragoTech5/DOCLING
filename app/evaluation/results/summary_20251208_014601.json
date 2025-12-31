@@ -1,0 +1,82 @@
+{
+  "total_queries": 30,
+  "avg_precision_at_k": 0.0875,
+  "avg_recall": 0.6833333333333333,
+  "avg_source_hit_rate": 0.7166666666666667,
+  "avg_keyword_coverage": 0.9388888888888889,
+  "avg_answer_relevance": 0.8,
+  "avg_faithfulness": 0.0,
+  "failure_counts": {
+    "retrieval_failure": 8,
+    "generation_failure": 5,
+    "mixed_failure": 0,
+    "no_failure": 17
+  },
+  "failure_percentages": {
+    "retrieval_failure": 26.666666666666668,
+    "generation_failure": 16.666666666666664,
+    "mixed_failure": 0.0,
+    "no_failure": 56.666666666666664
+  },
+  "by_query_type": {
+    "negative": {
+      "count": 4,
+      "avg_source_hit_rate": 1.0,
+      "avg_answer_relevance": 0.0,
+      "success_rate": 0.0
+    },
+    "comparison": {
+      "count": 5,
+      "avg_source_hit_rate": 0.6,
+      "avg_answer_relevance": 1.0,
+      "success_rate": 80.0
+    },
+    "multi_hop": {
+      "count": 5,
+      "avg_source_hit_rate": 0.3333333333333333,
+      "avg_answer_relevance": 1.0,
+      "success_rate": 20.0
+    },
+    "simple_factual": {
+      "count": 6,
+      "avg_source_hit_rate": 0.638888888888889,
+      "avg_answer_relevance": 0.9166666666666666,
+      "success_rate": 66.66666666666666
+    },
+    "ambiguous": {
+      "count": 5,
+      "avg_source_hit_rate": 1.0,
+      "avg_answer_relevance": 1.0,
+      "success_rate": 100.0
+    },
+    "domain_specific": {
+      "count": 5,
+      "avg_source_hit_rate": 0.8,
+      "avg_answer_relevance": 0.7,
+      "success_rate": 60.0
+    }
+  },
+  "by_difficulty": {
+    "easy": {
+      "count": 10,
+      "avg_source_hit_rate": 0.7833333333333333,
+      "avg_answer_relevance": 0.55,
+      "success_rate": 40.0
+    },
+    "medium": {
+      "count": 10,
+      "avg_source_hit_rate": 0.8,
+      "avg_answer_relevance": 0.85,
+      "success_rate": 70.0
+    },
+    "hard": {
+      "count": 10,
+      "avg_source_hit_rate": 0.5666666666666667,
+      "avg_answer_relevance": 1.0,
+      "success_rate": 60.0
+    }
+  },
+  "avg_retrieval_time_ms": 118.49177678426106,
+  "avg_generation_time_ms": 8392.592732111612,
+  "avg_total_time_ms": 8511.084508895874
+}

@@ -1,0 +1,50 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.venv
+*.egg-info/
+dist/
+build/
+
+# Node
+node_modules/
+npm-debug.log
+.next/
+out/
+.cache/
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+uvicorn.log
+runpod_backups/
+
+# Build artifacts
+dist/
+telegram-mini-app/dist/
+telegram-mini-app/build/
+.mcp-browser-only.json
+
+# Backups
+*.bak
+*.backup
+*.sql.gz

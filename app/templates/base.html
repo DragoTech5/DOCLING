@@ -1,0 +1,718 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ title }} - Docling</title>
+    <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+
+    <!-- Fonts: Geist (full weight range) + JetBrains Mono -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Geist font from CDN - Extended weight range for dramatic typography -->
+    <style>
+        @font-face {
+            font-family: 'Geist';
+            src: url('https://cdn.jsdelivr.net/npm/geist@1.0.0/dist/fonts/geist-sans/Geist-Thin.woff2') format('woff2');
+            font-weight: 100;
+            font-style: normal;
+            font-display: swap;
+        }
+        @font-face {
+            font-family: 'Geist';
+            src: url('https://cdn.jsdelivr.net/npm/geist@1.0.0/dist/fonts/geist-sans/Geist-UltraLight.woff2') format('woff2');
+            font-weight: 200;
+            font-style: normal;
+            font-display: swap;
+        }
+        @font-face {
+            font-family: 'Geist';
+            src: url('https://cdn.jsdelivr.net/npm/geist@1.0.0/dist/fonts/geist-sans/Geist-Light.woff2') format('woff2');
+            font-weight: 300;
+            font-style: normal;
+            font-display: swap;
+        }
+        @font-face {
+            font-family: 'Geist';
+            src: url('https://cdn.jsdelivr.net/npm/geist@1.0.0/dist/fonts/geist-sans/Geist-Regular.woff2') format('woff2');
+            font-weight: 400;
+            font-style: normal;
+            font-display: swap;
+        }
+        @font-face {
+            font-family: 'Geist';
+            src: url('https://cdn.jsdelivr.net/npm/geist@1.0.0/dist/fonts/geist-sans/Geist-Medium.woff2') format('woff2');
+            font-weight: 500;
+            font-style: normal;
+            font-display: swap;
+        }
+        @font-face {
+            font-family: 'Geist';
+            src: url('https://cdn.jsdelivr.net/npm/geist@1.0.0/dist/fonts/geist-sans/Geist-SemiBold.woff2') format('woff2');
+            font-weight: 600;
+            font-style: normal;
+            font-display: swap;
+        }
+        @font-face {
+            font-family: 'Geist';
+            src: url('https://cdn.jsdelivr.net/npm/geist@1.0.0/dist/fonts/geist-sans/Geist-Bold.woff2') format('woff2');
+            font-weight: 700;
+            font-style: normal;
+            font-display: swap;
+        }
+        @font-face {
+            font-family: 'Geist';
+            src: url('https://cdn.jsdelivr.net/npm/geist@1.0.0/dist/fonts/geist-sans/Geist-Black.woff2') format('woff2');
+            font-weight: 900;
+            font-style: normal;
+            font-display: swap;
+        }
+    </style>
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Geist', 'system-ui', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    },
+                    fontSize: {
+                        // Dramatic type scale with 1.333 ratio (perfect fourth)
+                        'xs': ['0.75rem', { lineHeight: '1rem' }],
+                        'sm': ['0.875rem', { lineHeight: '1.25rem' }],
+                        'base': ['1rem', { lineHeight: '1.5rem' }],
+                        'lg': ['1.125rem', { lineHeight: '1.75rem' }],
+                        'xl': ['1.333rem', { lineHeight: '1.875rem' }],
+                        '2xl': ['1.777rem', { lineHeight: '2.25rem' }],
+                        '3xl': ['2.369rem', { lineHeight: '2.5rem' }],
+                        '4xl': ['3.157rem', { lineHeight: '1.1' }],
+                        '5xl': ['4.209rem', { lineHeight: '1' }],
+                        '6xl': ['5.61rem', { lineHeight: '1' }],
+                        'display': ['7.478rem', { lineHeight: '0.95', letterSpacing: '-0.02em' }],
+                    },
+                    colors: {
+                        // Catppuccin Mocha - Enhanced with deeper layers
+                        crust: '#11111b',
+                        mantle: '#181825',
+                        base: '#1e1e2e',
+                        surface: {
+                            0: '#313244',
+                            1: '#45475a',
+                            2: '#585b70',
+                        },
+                        overlay: {
+                            0: '#6c7086',
+                            1: '#7f849c',
+                            2: '#9399b2',
+                        },
+                        text: {
+                            DEFAULT: '#cdd6f4',
+                            sub: '#a6adc8',
+                            muted: '#6c7086',
+                        },
+                        // Primary accent - warm gradient
+                        peach: '#fab387',
+                        yellow: '#f9e2af',
+                        // Secondary accent - cool contrast
+                        mauve: '#cba6f7',
+                        lavender: '#b4befe',
+                        // Supporting colors
+                        sapphire: '#74c7ec',
+                        blue: '#89b4fa',
+                        sky: '#89dceb',
+                        teal: '#94e2d5',
+                        green: '#a6e3a1',
+                        maroon: '#eba0ac',
+                        red: '#f38ba8',
+                        pink: '#f5c2e7',
+                        flamingo: '#f2cdcd',
+                        rosewater: '#f5e0dc',
+                    },
+                    animation: {
+                        'fade-in': 'fadeIn 0.5s ease-out forwards',
+                        'slide-up': 'slideUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards',
+                        'slide-down': 'slideDown 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards',
+                        'slide-in-left': 'slideInLeft 0.3s ease-out forwards',
+                        'slide-in-right': 'slideInRight 0.3s ease-out forwards',
+                        'scale-in': 'scaleIn 0.2s ease-out forwards',
+                        'pulse-subtle': 'pulseSubtle 2s ease-in-out infinite',
+                        'glow': 'glow 2s ease-in-out infinite alternate',
+                        'shimmer': 'shimmer 2s linear infinite',
+                        'float': 'float 3s ease-in-out infinite',
+                        'gradient-x': 'gradientX 3s ease infinite',
+                    },
+                    keyframes: {
+                        fadeIn: {
+                            '0%': { opacity: '0' },
+                            '100%': { opacity: '1' },
+                        },
+                        slideUp: {
+                            '0%': { opacity: '0', transform: 'translateY(24px)' },
+                            '100%': { opacity: '1', transform: 'translateY(0)' },
+                        },
+                        slideDown: {
+                            '0%': { opacity: '0', transform: 'translateY(-16px)' },
+                            '100%': { opacity: '1', transform: 'translateY(0)' },
+                        },
+                        slideInLeft: {
+                            '0%': { opacity: '0', transform: 'translateX(-20px)' },
+                            '100%': { opacity: '1', transform: 'translateX(0)' },
+                        },
+                        slideInRight: {
+                            '0%': { opacity: '0', transform: 'translateX(20px)' },
+                            '100%': { opacity: '1', transform: 'translateX(0)' },
+                        },
+                        scaleIn: {
+                            '0%': { opacity: '0', transform: 'scale(0.95)' },
+                            '100%': { opacity: '1', transform: 'scale(1)' },
+                        },
+                        pulseSubtle: {
+                            '0%, 100%': { opacity: '1' },
+                            '50%': { opacity: '0.7' },
+                        },
+                        glow: {
+                            '0%': { boxShadow: '0 0 5px rgba(250, 179, 135, 0.2)' },
+                            '100%': { boxShadow: '0 0 20px rgba(250, 179, 135, 0.4)' },
+                        },
+                        shimmer: {
+                            '0%': { backgroundPosition: '-200% 0' },
+                            '100%': { backgroundPosition: '200% 0' },
+                        },
+                        float: {
+                            '0%, 100%': { transform: 'translateY(0)' },
+                            '50%': { transform: 'translateY(-8px)' },
+                        },
+                        gradientX: {
+                            '0%, 100%': { backgroundPosition: '0% 50%' },
+                            '50%': { backgroundPosition: '100% 50%' },
+                        },
+                    },
+                    boxShadow: {
+                        'glow-sm': '0 0 15px -3px rgba(250, 179, 135, 0.3)',
+                        'glow': '0 0 25px -5px rgba(250, 179, 135, 0.4)',
+                        'glow-lg': '0 0 40px -8px rgba(250, 179, 135, 0.5)',
+                        'glow-mauve': '0 0 25px -5px rgba(203, 166, 247, 0.4)',
+                        'inner-glow': 'inset 0 1px 0 0 rgba(255, 255, 255, 0.05)',
+                    },
+                    backgroundImage: {
+                        'gradient-radial': 'radial-gradient(var(--tw-gradient-stops))',
+                        'gradient-conic': 'conic-gradient(from 180deg at 50% 50%, var(--tw-gradient-stops))',
+                        'noise': "url(\"data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E\")",
+                    },
+                }
+            }
+        }
+    </script>
+
+    <!-- HTMX -->
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+
+    <!-- Alpine.js -->
+    <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
+
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <style>
+        /* Scrollbar - Refined */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb {
+            background: #313244;
+            border-radius: 4px;
+            border: 2px solid transparent;
+            background-clip: padding-box;
+        }
+        ::-webkit-scrollbar-thumb:hover { background: #45475a; }
+
+        /* Selection */
+        ::selection {
+            background: rgba(250, 179, 135, 0.3);
+            color: #cdd6f4;
+        }
+
+        /* Smooth focus transitions */
+        *:focus-visible {
+            outline: 2px solid #fab387;
+            outline-offset: 2px;
+        }
+
+        /* Card surface - Enhanced with hover lift */
+        .card {
+            background: rgba(30, 30, 46, 0.8);
+            border: 1px solid rgba(49, 50, 68, 0.8);
+            border-radius: 16px;
+            backdrop-filter: blur(8px);
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .card:hover {
+            border-color: rgba(69, 71, 90, 0.8);
+            transform: translateY(-2px);
+            box-shadow:
+                0 12px 40px -12px rgba(0, 0, 0, 0.4),
+                0 0 0 1px rgba(255, 255, 255, 0.02);
+        }
+        .card-static {
+            background: rgba(30, 30, 46, 0.8);
+            border: 1px solid rgba(49, 50, 68, 0.8);
+            border-radius: 16px;
+        }
+
+        /* Primary button - Enhanced with press effect */
+        .btn-primary {
+            background: linear-gradient(135deg, #fab387 0%, #f9e2af 100%);
+            color: #11111b;
+            font-weight: 600;
+            border-radius: 12px;
+            transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+            position: relative;
+            overflow: hidden;
+        }
+        .btn-primary::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(135deg, rgba(255,255,255,0.2) 0%, transparent 50%);
+            opacity: 0;
+            transition: opacity 0.2s ease;
+        }
+        .btn-primary:hover {
+            box-shadow: 0 0 30px rgba(250, 179, 135, 0.5), 0 8px 24px -8px rgba(250, 179, 135, 0.4);
+            transform: translateY(-2px);
+        }
+        .btn-primary:hover::before {
+            opacity: 1;
+        }
+        .btn-primary:active {
+            transform: translateY(0) scale(0.98);
+            box-shadow: 0 0 15px rgba(250, 179, 135, 0.3);
+        }
+        .btn-primary:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        /* Secondary button - Enhanced */
+        .btn-secondary {
+            background: rgba(49, 50, 68, 0.6);
+            color: #cdd6f4;
+            border: 1px solid rgba(69, 71, 90, 0.5);
+            border-radius: 12px;
+            transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .btn-secondary:hover {
+            background: rgba(69, 71, 90, 0.6);
+            border-color: rgba(88, 91, 112, 0.5);
+            transform: translateY(-1px);
+        }
+        .btn-secondary:active {
+            transform: translateY(0) scale(0.98);
+        }
+
+        /* Ghost button */
+        .btn-ghost {
+            background: transparent;
+            color: #a6adc8;
+            transition: all 0.2s ease;
+        }
+        .btn-ghost:hover {
+            background: rgba(49, 50, 68, 0.5);
+            color: #cdd6f4;
+        }
+
+        /* Input styles - Enhanced with explicit color for all browsers */
+        input, textarea, select {
+            background: rgba(17, 17, 27, 0.8) !important;
+            border: 1px solid rgba(49, 50, 68, 0.8);
+            color: #cdd6f4 !important;
+            -webkit-text-fill-color: #cdd6f4 !important;
+            caret-color: #fab387;
+            border-radius: 12px;
+            transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+            font-size: 16px; /* Prevents iOS zoom on focus */
+        }
+        input:hover, textarea:hover, select:hover {
+            border-color: rgba(69, 71, 90, 0.8);
+        }
+        input:focus, textarea:focus, select:focus {
+            outline: none;
+            border-color: #fab387;
+            box-shadow: 0 0 0 4px rgba(250, 179, 135, 0.1), 0 0 20px -5px rgba(250, 179, 135, 0.2);
+            color: #cdd6f4 !important;
+            -webkit-text-fill-color: #cdd6f4 !important;
+        }
+        input::placeholder, textarea::placeholder {
+            color: #6c7086 !important;
+            -webkit-text-fill-color: #6c7086 !important;
+            opacity: 1;
+        }
+        /* Autofill styles - prevent browser from changing colors */
+        input:-webkit-autofill,
+        input:-webkit-autofill:hover,
+        input:-webkit-autofill:focus,
+        textarea:-webkit-autofill,
+        textarea:-webkit-autofill:hover,
+        textarea:-webkit-autofill:focus {
+            -webkit-text-fill-color: #cdd6f4 !important;
+            -webkit-box-shadow: 0 0 0 1000px rgba(17, 17, 27, 0.95) inset !important;
+            box-shadow: 0 0 0 1000px rgba(17, 17, 27, 0.95) inset !important;
+            caret-color: #fab387 !important;
+        }
+
+        /* HTMX loading */
+        .htmx-request .htmx-indicator { opacity: 1; }
+        .htmx-indicator { opacity: 0; transition: opacity 200ms ease-in; }
+
+        /* Staggered animation delays - Extended */
+        .stagger-1 { animation-delay: 0.05s; }
+        .stagger-2 { animation-delay: 0.1s; }
+        .stagger-3 { animation-delay: 0.15s; }
+        .stagger-4 { animation-delay: 0.2s; }
+        .stagger-5 { animation-delay: 0.25s; }
+        .stagger-6 { animation-delay: 0.3s; }
+        .stagger-7 { animation-delay: 0.35s; }
+        .stagger-8 { animation-delay: 0.4s; }
+
+        /* Grid pattern background - Subtle */
+        .grid-pattern {
+            background-image:
+                linear-gradient(rgba(49, 50, 68, 0.15) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(49, 50, 68, 0.15) 1px, transparent 1px);
+            background-size: 48px 48px;
+        }
+
+        /* Dot pattern background */
+        .dot-pattern {
+            background-image: radial-gradient(rgba(49, 50, 68, 0.4) 1px, transparent 1px);
+            background-size: 24px 24px;
+        }
+
+        /* Gradient text - Primary */
+        .gradient-text {
+            background: linear-gradient(135deg, #fab387, #f9e2af);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        /* Gradient text - Secondary (mauve) */
+        .gradient-text-mauve {
+            background: linear-gradient(135deg, #cba6f7, #b4befe);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        /* Animated gradient background */
+        .gradient-animate {
+            background: linear-gradient(-45deg, #fab387, #f9e2af, #cba6f7, #89b4fa);
+            background-size: 400% 400%;
+            animation: gradientX 8s ease infinite;
+        }
+
+        /* Glass effect */
+        .glass {
+            background: rgba(30, 30, 46, 0.6);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        /* Shimmer effect for loading states */
+        .shimmer {
+            background: linear-gradient(90deg,
+                rgba(49, 50, 68, 0) 0%,
+                rgba(49, 50, 68, 0.4) 50%,
+                rgba(49, 50, 68, 0) 100%);
+            background-size: 200% 100%;
+            animation: shimmer 1.5s infinite;
+        }
+
+        /* Status indicators */
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+        }
+        .status-success { background: #a6e3a1; box-shadow: 0 0 8px rgba(166, 227, 161, 0.5); }
+        .status-warning { background: #f9e2af; box-shadow: 0 0 8px rgba(249, 226, 175, 0.5); }
+        .status-error { background: #f38ba8; box-shadow: 0 0 8px rgba(243, 139, 168, 0.5); }
+        .status-info { background: #89b4fa; box-shadow: 0 0 8px rgba(137, 180, 250, 0.5); }
+        .status-muted { background: #6c7086; }
+
+        /* Icon button hover effect */
+        .icon-btn {
+            transition: all 0.2s ease;
+            border-radius: 8px;
+        }
+        .icon-btn:hover {
+            background: rgba(49, 50, 68, 0.5);
+            transform: scale(1.05);
+        }
+        .icon-btn:active {
+            transform: scale(0.95);
+        }
+
+        /* Smooth list item transitions */
+        .list-item-enter {
+            animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+
+        /* Number/metric styling */
+        .metric {
+            font-family: 'JetBrains Mono', monospace;
+            font-variant-numeric: tabular-nums;
+            letter-spacing: -0.02em;
+        }
+
+        /* Tooltip styles */
+        [data-tooltip] {
+            position: relative;
+        }
+        [data-tooltip]::after {
+            content: attr(data-tooltip);
+            position: absolute;
+            bottom: 100%;
+            left: 50%;
+            transform: translateX(-50%) translateY(-4px);
+            padding: 6px 10px;
+            background: #313244;
+            color: #cdd6f4;
+            font-size: 12px;
+            border-radius: 6px;
+            white-space: nowrap;
+            opacity: 0;
+            pointer-events: none;
+            transition: all 0.2s ease;
+        }
+        [data-tooltip]:hover::after {
+            opacity: 1;
+            transform: translateX(-50%) translateY(-8px);
+        }
+    </style>
+
+    {% block head %}{% endblock %}
+</head>
+<body class="bg-crust text-text font-sans min-h-screen antialiased" x-data="authState()" x-init="checkAuth()">
+    <!-- Subtle grid pattern overlay -->
+    <div class="fixed inset-0 grid-pattern pointer-events-none opacity-50"></div>
+
+    <div class="relative flex min-h-screen">
+        <!-- Sidebar -->
+        <aside class="fixed left-0 top-0 h-full w-[260px] bg-mantle border-r border-surface-0 z-50">
+            <div class="flex flex-col h-full">
+                <!-- Logo -->
+                <div class="p-6 border-b border-surface-0">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-lg bg-gradient-to-br from-peach to-yellow flex items-center justify-center">
+                            <i data-lucide="brain" class="w-5 h-5 text-crust"></i>
+                        </div>
+                        <div>
+                            <h1 class="font-bold text-lg text-text">Docling</h1>
+                            <p class="text-xs text-text-muted font-mono">v0.1.0</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Navigation -->
+                <nav class="flex-1 p-4 space-y-1">
+                    <a href="/" class="nav-item {% if request.url.path == '/' %}active{% endif %}">
+                        <i data-lucide="layout-grid" class="w-[18px] h-[18px]"></i>
+                        <span>Dashboard</span>
+                    </a>
+                    <a href="/ingest" class="nav-item {% if request.url.path == '/ingest' %}active{% endif %}">
+                        <i data-lucide="plus-circle" class="w-[18px] h-[18px]"></i>
+                        <span>Ingest</span>
+                    </a>
+                    <a href="/browse" class="nav-item {% if request.url.path == '/browse' %}active{% endif %}">
+                        <i data-lucide="database" class="w-[18px] h-[18px]"></i>
+                        <span>Browse</span>
+                    </a>
+                    <a href="/query" class="nav-item {% if request.url.path == '/query' %}active{% endif %}">
+                        <i data-lucide="search" class="w-[18px] h-[18px]"></i>
+                        <span>Query</span>
+                    </a>
+                    <a href="/chat" class="nav-item {% if request.url.path == '/chat' %}active{% endif %}">
+                        <i data-lucide="messages-square" class="w-[18px] h-[18px]"></i>
+                        <span>Chat</span>
+                    </a>
+
+                    <div class="pt-6 mt-6 border-t border-surface-0">
+                        <p class="text-[10px] font-mono font-semibold text-text-muted uppercase tracking-widest mb-3 px-3">System</p>
+                        <a href="/settings" class="nav-item {% if request.url.path == '/settings' %}active{% endif %}">
+                            <i data-lucide="sliders-horizontal" class="w-[18px] h-[18px]"></i>
+                            <span>Settings</span>
+                        </a>
+                        <a href="/status" class="nav-item {% if request.url.path == '/status' %}active{% endif %}">
+                            <i data-lucide="activity" class="w-[18px] h-[18px]"></i>
+                            <span>Status</span>
+                        </a>
+                        <a href="/docs" target="_blank" class="nav-item">
+                            <i data-lucide="book-open" class="w-[18px] h-[18px]"></i>
+                            <span>API Docs</span>
+                            <i data-lucide="external-link" class="w-3 h-3 ml-auto opacity-50"></i>
+                        </a>
+                    </div>
+                </nav>
+
+                <!-- User Section / Footer -->
+                <div class="p-4 border-t border-surface-0 space-y-3">
+                    <!-- User Info (when logged in) -->
+                    <template x-if="user">
+                        <div class="space-y-3">
+                            <div class="flex items-center gap-3 p-2 rounded-lg bg-surface-0/50">
+                                <div class="w-9 h-9 rounded-lg bg-gradient-to-br from-peach/30 to-yellow/30 flex items-center justify-center flex-shrink-0">
+                                    <span class="text-sm font-semibold text-peach" x-text="user.email ? user.email[0].toUpperCase() : 'U'"></span>
+                                </div>
+                                <div class="flex-1 min-w-0">
+                                    <p class="text-sm font-medium text-text truncate" x-text="user.email"></p>
+                                    <p class="text-xs text-text-muted capitalize" x-text="user.membership_tier || 'Free'"></p>
+                                </div>
+                            </div>
+                            <div class="flex gap-2">
+                                <a href="/pricing" class="flex-1 text-center px-3 py-2 text-xs font-medium text-text-sub hover:text-text bg-surface-0/50 hover:bg-surface-0 rounded-lg transition-colors">
+                                    <span x-text="user.membership_tier === 'free' ? 'Upgrade' : 'Billing'"></span>
+                                </a>
+                                <a href="/api/auth/logout" class="flex-1 text-center px-3 py-2 text-xs font-medium text-text-sub hover:text-red bg-surface-0/50 hover:bg-red/10 rounded-lg transition-colors">
+                                    Sign out
+                                </a>
+                            </div>
+                        </div>
+                    </template>
+
+                    <!-- Login Button (when logged out) -->
+                    <template x-if="!user && !loading">
+                        <div class="space-y-2">
+                            <a href="/login" class="flex items-center justify-center gap-2 w-full px-4 py-2.5 rounded-lg bg-gradient-to-r from-peach to-yellow text-crust font-semibold text-sm hover:shadow-lg hover:shadow-peach/20 transition-all">
+                                <i data-lucide="log-in" class="w-4 h-4"></i>
+                                Sign in
+                            </a>
+                            <a href="/pricing" class="flex items-center justify-center gap-2 w-full px-4 py-2 rounded-lg bg-surface-0/50 text-text-sub hover:text-text text-xs font-medium transition-colors">
+                                View pricing
+                            </a>
+                        </div>
+                    </template>
+
+                    <!-- Loading State -->
+                    <template x-if="loading">
+                        <div class="flex items-center justify-center py-3">
+                            <div class="w-5 h-5 border-2 border-surface-1 border-t-peach rounded-full animate-spin"></div>
+                        </div>
+                    </template>
+
+                    <!-- System Status -->
+                    <div class="flex items-center gap-2 text-text-muted pt-2 border-t border-surface-0/50">
+                        <div class="w-2 h-2 rounded-full bg-green animate-pulse-subtle"></div>
+                        <span class="text-xs font-mono">System Online</span>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="flex-1 ml-[260px]">
+            <!-- Header -->
+            <header class="sticky top-0 z-40 h-16 bg-mantle/80 backdrop-blur-sm border-b border-surface-0 flex items-center px-8">
+                <h2 class="text-lg font-semibold text-text">{{ title }}</h2>
+                <div class="ml-auto flex items-center gap-4">
+                    <div class="htmx-indicator">
+                        <div class="w-5 h-5 border-2 border-blue border-t-transparent rounded-full animate-spin"></div>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Page Content -->
+            <div class="p-8">
+                {% block content %}{% endblock %}
+            </div>
+        </main>
+    </div>
+
+    <style>
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 14px;
+            border-radius: 10px;
+            color: #a6adc8;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+            position: relative;
+        }
+        .nav-item::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 3px;
+            height: 0;
+            background: linear-gradient(180deg, #fab387, #f9e2af);
+            border-radius: 0 2px 2px 0;
+            transition: height 0.2s ease;
+        }
+        .nav-item:hover {
+            background: rgba(69, 71, 90, 0.4);
+            color: #cdd6f4;
+            transform: translateX(2px);
+        }
+        .nav-item:hover i {
+            transform: scale(1.1);
+        }
+        .nav-item.active {
+            background: linear-gradient(135deg, rgba(250, 179, 135, 0.15), rgba(249, 226, 175, 0.1));
+            color: #fab387;
+        }
+        .nav-item.active::before {
+            height: 60%;
+        }
+        .nav-item.active i {
+            color: #fab387;
+        }
+        .nav-item i {
+            transition: transform 0.2s ease;
+        }
+    </style>
+
+    <script>
+        // Auth state management
+        function authState() {
+            return {
+                user: null,
+                loading: true,
+
+                async checkAuth() {
+                    try {
+                        const response = await fetch('/api/auth/status');
+                        const data = await response.json();
+
+                        if (data.authenticated && data.user) {
+                            this.user = data.user;
+                        } else {
+                            this.user = null;
+                        }
+                    } catch (e) {
+                        console.error('Failed to check auth status:', e);
+                        this.user = null;
+                    } finally {
+                        this.loading = false;
+                        this.$nextTick(() => lucide.createIcons());
+                    }
+                }
+            }
+        }
+
+        lucide.createIcons();
+    </script>
+
+    {% block scripts %}{% endblock %}
+</body>
+</html>

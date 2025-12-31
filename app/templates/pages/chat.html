@@ -1,0 +1,646 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div x-data="chatPage()" x-init="init()" class="flex h-[calc(100vh-140px)] gap-4">
+    <!-- Conversations Sidebar - Enhanced -->
+    <div class="w-72 flex-shrink-0 flex flex-col rounded-2xl overflow-hidden border border-surface-0/50 bg-mantle/50">
+        <!-- Header -->
+        <div class="p-4 border-b border-surface-0/50">
+            <button @click="createConversation()" class="w-full btn-primary py-3 rounded-xl text-sm font-semibold flex items-center justify-center gap-2 group">
+                <i data-lucide="sparkles" class="w-4 h-4 group-hover:animate-pulse"></i>
+                New Conversation
+            </button>
+        </div>
+
+        <!-- MAG-LIB Toggle - Esoteric Collection -->
+        <div class="p-3 border-b border-surface-0/50">
+            <label class="flex items-center justify-between cursor-pointer group">
+                <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-mauve/20 to-pink/20 flex items-center justify-center group-hover:from-mauve/30 group-hover:to-pink/30 transition-all">
+                        <i data-lucide="sparkles" class="w-4 h-4 text-mauve"></i>
+                    </div>
+                    <div>
+                        <span class="text-sm font-medium text-text">MAG-LIB</span>
+                        <p class="text-xs text-text-muted">296K+ esoteric texts</p>
+                    </div>
+                </div>
+                <div class="relative">
+                    <input type="checkbox" x-model="useMaglib" class="sr-only peer">
+                    <div class="w-11 h-6 bg-surface-1 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-text-muted after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-gradient-to-r peer-checked:from-mauve peer-checked:to-pink peer-checked:after:bg-white"></div>
+                </div>
+            </label>
+        </div>
+
+        <!-- Category Filter - Enhanced (hidden when MAG-LIB active) -->
+        <div class="p-3 border-b border-surface-0/50" x-show="!useMaglib" x-transition>
+            <div class="relative">
+                <button @click="showCategoryFilter = !showCategoryFilter"
+                        class="w-full bg-surface-0/30 hover:bg-surface-0/50 rounded-xl px-4 py-2.5 text-sm text-left flex items-center justify-between transition-all duration-200 border border-transparent hover:border-surface-1">
+                    <div class="flex items-center gap-2">
+                        <i data-lucide="filter" class="w-4 h-4 text-text-muted"></i>
+                        <span x-text="selectedCategoryNames || 'All Sources'" class="text-text-sub truncate"></span>
+                    </div>
+                    <i data-lucide="chevron-down" class="w-4 h-4 text-text-muted transition-transform duration-200" :class="showCategoryFilter ? 'rotate-180' : ''"></i>
+                </button>
+                <div x-show="showCategoryFilter"
+                     x-transition:enter="transition ease-out duration-200"
+                     x-transition:enter-start="opacity-0 -translate-y-2"
+                     x-transition:enter-end="opacity-100 translate-y-0"
+                     x-transition:leave="transition ease-in duration-150"
+                     x-transition:leave-start="opacity-100 translate-y-0"
+                     x-transition:leave-end="opacity-0 -translate-y-2"
+                     @click.outside="showCategoryFilter = false"
+                     class="absolute top-full left-0 right-0 mt-2 bg-base border border-surface-0 rounded-xl shadow-xl z-50 max-h-56 overflow-y-auto">
+                    <div class="p-2">
+                        <label class="flex items-center gap-3 px-3 py-2.5 hover:bg-surface-0/50 cursor-pointer rounded-lg transition-colors">
+                            <input type="checkbox" :checked="selectedCategories.length === 0" @change="selectedCategories = []" class="w-4 h-4 rounded bg-crust border-surface-1 text-peach focus:ring-peach/20">
+                            <span class="text-sm text-text">All Sources</span>
+                        </label>
+                        <template x-for="cat in categories" :key="cat.id">
+                            <label class="flex items-center gap-3 px-3 py-2.5 hover:bg-surface-0/50 cursor-pointer rounded-lg transition-colors">
+                                <input type="checkbox" :value="cat.id" x-model="selectedCategories" class="w-4 h-4 rounded bg-crust border-surface-1 text-peach focus:ring-peach/20">
+                                <span class="w-2 h-2 rounded-full" :style="`background: ${cat.color || '#fab387'}`"></span>
+                                <span class="text-sm text-text-sub" x-text="cat.name"></span>
+                            </label>
+                        </template>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Conversations List - Enhanced -->
+        <div class="flex-1 overflow-y-auto p-3 space-y-1.5">
+            <template x-for="conv in conversations" :key="conv.id">
+                <div @click="selectConversation(conv.id)"
+                     :class="currentConversationId === conv.id
+                         ? (conv.use_maglib ? 'bg-gradient-to-r from-mauve/15 to-pink/10 border-mauve/30 shadow-glow-sm' : 'bg-gradient-to-r from-peach/15 to-yellow/10 border-peach/30 shadow-glow-sm')
+                         : 'hover:bg-surface-0/40 border-transparent'"
+                     class="p-3.5 rounded-xl cursor-pointer border transition-all duration-200 group">
+                    <div class="flex items-start justify-between gap-2">
+                        <div class="flex-1 min-w-0">
+                            <div class="flex items-center gap-2">
+                                <p class="font-medium text-sm truncate leading-tight"
+                                   :class="currentConversationId === conv.id ? (conv.use_maglib ? 'text-mauve' : 'text-peach') : 'text-text'" x-text="conv.title"></p>
+                                <span x-show="conv.use_maglib" class="px-1.5 py-0.5 text-[10px] font-bold bg-mauve/20 text-mauve rounded-md">MAG</span>
+                            </div>
+                            <p class="text-xs text-text-muted mt-1.5 font-mono" x-text="formatDate(conv.updated_at)"></p>
+                        </div>
+                        <button @click.stop="deleteConversation(conv.id)"
+                                class="opacity-0 group-hover:opacity-100 p-1.5 text-text-muted hover:text-red hover:bg-red/10 rounded-lg transition-all">
+                            <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                        </button>
+                    </div>
+                </div>
+            </template>
+
+            <div x-show="conversations.length === 0" class="text-center py-12">
+                <div class="w-14 h-14 mx-auto mb-4 rounded-xl bg-surface-0/50 flex items-center justify-center">
+                    <i data-lucide="message-circle" class="w-7 h-7 text-text-muted"></i>
+                </div>
+                <p class="text-sm text-text-muted">No conversations yet</p>
+                <p class="text-xs text-text-muted mt-1">Start a new one above</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Chat Area - Enhanced -->
+    <div class="flex-1 flex flex-col overflow-hidden rounded-2xl border border-surface-0/50 bg-base/30">
+        <!-- Messages Container -->
+        <div x-ref="messagesContainer" class="flex-1 overflow-y-auto">
+            <!-- Welcome State - Enhanced -->
+            <div x-show="!currentConversationId" class="h-full flex items-center justify-center">
+                <div class="text-center max-w-xl px-8">
+                    <!-- Animated Logo/Icon -->
+                    <div class="relative w-28 h-28 mx-auto mb-10">
+                        <div class="absolute inset-0 bg-gradient-to-br from-peach/30 to-mauve/30 rounded-3xl blur-2xl animate-pulse-subtle"></div>
+                        <div class="relative w-full h-full rounded-3xl bg-gradient-to-br from-peach/20 to-mauve/20 flex items-center justify-center border border-peach/20">
+                            <i data-lucide="brain" class="w-14 h-14 text-peach"></i>
+                        </div>
+                    </div>
+
+                    <h2 class="text-4xl font-black tracking-tight mb-4">
+                        <span class="gradient-text">Ask your</span>
+                        <span class="text-text"> knowledge</span>
+                    </h2>
+                    <p class="text-text-muted text-lg mb-10 leading-relaxed">
+                        Search documents, transcripts, and web content. Get answers with sources and citations.
+                    </p>
+
+                    <!-- Quick Start Options -->
+                    <div class="flex flex-col sm:flex-row items-center justify-center gap-3 mb-8">
+                        <button @click="createConversation()" class="btn-primary px-8 py-3.5 rounded-xl text-base font-semibold flex items-center gap-2">
+                            <i data-lucide="sparkles" class="w-5 h-5"></i>
+                            Start Conversation
+                        </button>
+                    </div>
+
+                    <!-- Example Prompts -->
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 max-w-lg mx-auto">
+                        <button @click="createWithPrompt('What are the key takeaways?')"
+                                class="text-left p-4 rounded-xl bg-surface-0/30 hover:bg-surface-0/50 border border-transparent hover:border-surface-1 transition-all duration-200 group">
+                            <p class="text-sm text-text group-hover:text-peach transition-colors flex items-center gap-2">
+                                <i data-lucide="lightbulb" class="w-4 h-4 text-yellow"></i>
+                                Key takeaways
+                            </p>
+                        </button>
+                        <button @click="createWithPrompt('Summarize the main topics')"
+                                class="text-left p-4 rounded-xl bg-surface-0/30 hover:bg-surface-0/50 border border-transparent hover:border-surface-1 transition-all duration-200 group">
+                            <p class="text-sm text-text group-hover:text-peach transition-colors flex items-center gap-2">
+                                <i data-lucide="list" class="w-4 h-4 text-teal"></i>
+                                Summarize topics
+                            </p>
+                        </button>
+                        <button @click="createWithPrompt('Find information about...')"
+                                class="text-left p-4 rounded-xl bg-surface-0/30 hover:bg-surface-0/50 border border-transparent hover:border-surface-1 transition-all duration-200 group">
+                            <p class="text-sm text-text group-hover:text-peach transition-colors flex items-center gap-2">
+                                <i data-lucide="search" class="w-4 h-4 text-blue"></i>
+                                Find information
+                            </p>
+                        </button>
+                        <button @click="createWithPrompt('Compare and contrast...')"
+                                class="text-left p-4 rounded-xl bg-surface-0/30 hover:bg-surface-0/50 border border-transparent hover:border-surface-1 transition-all duration-200 group">
+                            <p class="text-sm text-text group-hover:text-peach transition-colors flex items-center gap-2">
+                                <i data-lucide="git-compare" class="w-4 h-4 text-mauve"></i>
+                                Compare content
+                            </p>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Q&A Thread - Enhanced -->
+            <div x-show="currentConversationId" class="max-w-4xl mx-auto px-6 lg:px-8 py-8 space-y-10">
+                <template x-for="(qa, index) in groupedMessages" :key="index">
+                    <article class="space-y-5 opacity-0 animate-slide-up" :style="`animation-delay: ${index * 0.05}s`">
+                        <!-- Question -->
+                        <div class="flex items-start gap-4">
+                            <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-peach/20 to-yellow/20 flex items-center justify-center flex-shrink-0">
+                                <i data-lucide="user" class="w-4 h-4 text-peach"></i>
+                            </div>
+                            <h2 class="text-xl font-semibold text-text leading-snug pt-1" x-text="qa.question"></h2>
+                        </div>
+
+                        <!-- Answer Card -->
+                        <div class="ml-13 pl-0 md:pl-13">
+                            <!-- Sources Chips -->
+                            <template x-if="qa.sources && qa.sources.length > 0">
+                                <div class="flex flex-wrap gap-2 mb-4">
+                                    <template x-for="(source, i) in qa.sources.slice(0, 4)" :key="i">
+                                        <a :href="source.source_url || '#'"
+                                           target="_blank"
+                                           class="group flex items-center gap-2 bg-surface-0/40 hover:bg-surface-0/70 rounded-lg px-3 py-2 text-sm transition-all duration-200 border border-transparent hover:border-peach/20">
+                                            <span class="w-5 h-5 rounded-md bg-peach/20 text-peach flex items-center justify-center text-xs font-mono font-bold group-hover:bg-peach group-hover:text-crust transition-all" x-text="i + 1"></span>
+                                            <span class="text-text-sub truncate max-w-[180px] text-xs" x-text="source.title"></span>
+                                        </a>
+                                    </template>
+                                    <template x-if="qa.sources.length > 4">
+                                        <button @click="qa.showAllSources = !qa.showAllSources"
+                                                class="flex items-center gap-1.5 bg-surface-0/40 hover:bg-surface-0/70 rounded-lg px-3 py-2 text-xs transition-colors text-text-muted hover:text-text">
+                                            <i data-lucide="plus" class="w-3 h-3"></i>
+                                            <span x-text="(qa.sources.length - 4) + ' more'"></span>
+                                        </button>
+                                    </template>
+                                </div>
+                            </template>
+
+                            <!-- Answer Content -->
+                            <div class="prose-content" x-html="formatAnswer(qa.answer)"></div>
+
+                            <!-- Expanded Sources -->
+                            <template x-if="qa.sources && qa.sources.length > 0">
+                                <details class="mt-6 group">
+                                    <summary class="flex items-center gap-2 text-sm text-text-muted cursor-pointer hover:text-text transition-colors py-2 select-none">
+                                        <i data-lucide="book-open" class="w-4 h-4"></i>
+                                        <span class="font-medium" x-text="qa.sources.length + ' sources cited'"></span>
+                                        <i data-lucide="chevron-right" class="w-4 h-4 ml-auto transition-transform duration-200 group-open:rotate-90"></i>
+                                    </summary>
+                                    <div class="mt-4 space-y-3 pl-2 border-l-2 border-peach/20">
+                                        <template x-for="(source, i) in qa.sources" :key="i">
+                                            <div class="flex items-start gap-3 py-2 pl-4 -ml-px hover:bg-surface-0/20 rounded-r-lg transition-colors">
+                                                <span class="w-6 h-6 rounded-md bg-peach/10 text-peach flex items-center justify-center text-xs font-mono font-bold flex-shrink-0" x-text="i + 1"></span>
+                                                <div class="flex-1 min-w-0">
+                                                    <p class="text-text font-medium text-sm" x-text="source.title"></p>
+                                                    <div class="flex items-center gap-2 text-text-muted text-xs mt-1">
+                                                        <span x-show="source.channel_name" class="flex items-center gap-1">
+                                                            <i data-lucide="youtube" class="w-3 h-3 text-red"></i>
+                                                            <span x-text="source.channel_name"></span>
+                                                        </span>
+                                                        <span x-show="source.channel_name && source.published_date">•</span>
+                                                        <span x-show="source.published_date" x-text="source.published_date"></span>
+                                                    </div>
+                                                    <a x-show="source.source_url"
+                                                       :href="source.source_url"
+                                                       target="_blank"
+                                                       class="text-peach hover:text-yellow text-xs mt-1 block truncate transition-colors"
+                                                       x-text="source.source_url"></a>
+                                                </div>
+                                            </div>
+                                        </template>
+                                    </div>
+                                </details>
+                            </template>
+                        </div>
+                    </article>
+                </template>
+
+                <!-- Streaming Response -->
+                <article x-show="isStreaming" class="space-y-5">
+                    <div class="flex items-start gap-4">
+                        <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-peach/20 to-yellow/20 flex items-center justify-center flex-shrink-0">
+                            <i data-lucide="user" class="w-4 h-4 text-peach"></i>
+                        </div>
+                        <h2 class="text-xl font-semibold text-text leading-snug pt-1" x-text="pendingQuestion"></h2>
+                    </div>
+
+                    <div class="ml-13 pl-0 md:pl-13">
+                        <!-- Loading Animation -->
+                        <div x-show="!streamingContent" class="flex items-center gap-3 py-4">
+                            <div class="flex gap-1.5">
+                                <span class="w-2.5 h-2.5 bg-peach rounded-full animate-bounce" style="animation-delay: 0ms"></span>
+                                <span class="w-2.5 h-2.5 bg-yellow rounded-full animate-bounce" style="animation-delay: 150ms"></span>
+                                <span class="w-2.5 h-2.5 bg-mauve rounded-full animate-bounce" style="animation-delay: 300ms"></span>
+                            </div>
+                            <span class="text-text-muted text-sm">Searching knowledge base...</span>
+                        </div>
+
+                        <div x-show="streamingContent" class="prose-content" x-html="formatAnswer(streamingContent)"></div>
+                    </div>
+                </article>
+            </div>
+        </div>
+
+        <!-- Input Area - Enhanced with Floating Design -->
+        <div class="p-4 md:p-6">
+            <div class="max-w-4xl mx-auto">
+                <form @submit.prevent="sendMessage()" class="relative">
+                    <div class="relative bg-surface-0/50 border border-surface-1 rounded-2xl overflow-hidden transition-all duration-300 focus-within:border-peach/50 focus-within:shadow-glow-sm">
+                        <textarea x-model="inputMessage"
+                                  @keydown.enter.prevent="if (!$event.shiftKey) sendMessage()"
+                                  :disabled="!currentConversationId || isStreaming"
+                                  :placeholder="currentConversationId ? 'Ask a follow-up question...' : 'Start a conversation first...'"
+                                  rows="1"
+                                  class="w-full bg-transparent px-5 py-4 pr-14 text-base text-text resize-none focus:outline-none placeholder:text-text-muted disabled:opacity-50"
+                                  style="min-height: 56px; max-height: 200px;"
+                                  @input="autoResize($event.target)"></textarea>
+                        <button type="submit"
+                                :disabled="!inputMessage.trim() || !currentConversationId || isStreaming"
+                                class="absolute right-3 bottom-3 bg-gradient-to-r from-peach to-yellow disabled:from-surface-1 disabled:to-surface-1 disabled:text-text-muted text-crust p-2.5 rounded-xl transition-all duration-200 hover:shadow-glow disabled:shadow-none">
+                            <i data-lucide="arrow-up" class="w-5 h-5"></i>
+                        </button>
+                    </div>
+                    <p class="text-xs text-text-muted mt-3 text-center">
+                        <kbd class="px-1.5 py-0.5 bg-surface-0 rounded text-text-sub">Enter</kbd> to send ·
+                        <kbd class="px-1.5 py-0.5 bg-surface-0 rounded text-text-sub">Shift + Enter</kbd> for new line
+                    </p>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+/* Enhanced Prose Styles */
+.prose-content {
+    color: #cdd6f4;
+    font-size: 1rem;
+    line-height: 1.75;
+}
+
+.prose-content h2 {
+    color: #fab387;
+    font-size: 1.25rem;
+    font-weight: 700;
+    margin-top: 1.75rem;
+    margin-bottom: 0.75rem;
+    letter-spacing: -0.01em;
+}
+
+.prose-content h3 {
+    color: #cdd6f4;
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin-top: 1.5rem;
+    margin-bottom: 0.5rem;
+}
+
+.prose-content p {
+    color: #cdd6f4;
+    margin-bottom: 1rem;
+}
+
+.prose-content ul, .prose-content ol {
+    margin-left: 1.5rem;
+    margin-bottom: 1rem;
+    padding-left: 0.5rem;
+}
+
+.prose-content li {
+    color: #a6adc8;
+    margin-bottom: 0.5rem;
+    padding-left: 0.25rem;
+}
+
+.prose-content li::marker {
+    color: #fab387;
+}
+
+.prose-content strong {
+    color: #cdd6f4;
+    font-weight: 600;
+}
+
+.prose-content code {
+    background: rgba(49, 50, 68, 0.6);
+    color: #f5c2e7;
+    padding: 0.2rem 0.5rem;
+    border-radius: 6px;
+    font-size: 0.875rem;
+    font-family: 'JetBrains Mono', monospace;
+}
+
+.prose-content pre {
+    background: rgba(17, 17, 27, 0.8);
+    border: 1px solid rgba(49, 50, 68, 0.8);
+    border-radius: 12px;
+    padding: 1rem;
+    overflow-x: auto;
+    margin: 1rem 0;
+}
+
+.prose-content pre code {
+    background: transparent;
+    padding: 0;
+    font-size: 0.875rem;
+}
+
+.prose-content a {
+    color: #fab387;
+    text-decoration: none;
+    border-bottom: 1px solid transparent;
+    transition: border-color 0.2s ease;
+}
+
+.prose-content a:hover {
+    border-bottom-color: #fab387;
+}
+
+.prose-content blockquote {
+    border-left: 3px solid #fab387;
+    padding-left: 1rem;
+    margin: 1rem 0;
+    color: #a6adc8;
+    font-style: italic;
+}
+
+.prose-content .citation {
+    color: #fab387;
+    font-size: 0.7rem;
+    font-family: 'JetBrains Mono', monospace;
+    vertical-align: super;
+    font-weight: 600;
+    margin-left: 1px;
+    cursor: pointer;
+}
+
+.prose-content .citation:hover {
+    text-decoration: underline;
+}
+
+/* Margin utilities */
+.ml-13 { margin-left: 3.25rem; }
+.pl-13 { padding-left: 3.25rem; }
+</style>
+
+<script>
+function chatPage() {
+    return {
+        categories: [],
+        conversations: [],
+        messages: [],
+        currentConversationId: null,
+        selectedCategories: [],
+        showCategoryFilter: false,
+        useMaglib: false,
+        inputMessage: '',
+        isStreaming: false,
+        streamingContent: '',
+        streamingSources: [],
+        pendingQuestion: '',
+
+        get selectedCategoryNames() {
+            if (this.selectedCategories.length === 0) return '';
+            const names = this.selectedCategories.map(id => {
+                const cat = this.categories.find(c => c.id === id);
+                return cat ? cat.name : '';
+            }).filter(n => n);
+            if (names.length <= 2) return names.join(', ');
+            return `${names.length} sources`;
+        },
+
+        get groupedMessages() {
+            const groups = [];
+            for (let i = 0; i < this.messages.length; i++) {
+                const msg = this.messages[i];
+                if (msg.role === 'user') {
+                    const nextMsg = this.messages[i + 1];
+                    // Only include Q&A pairs that have an assistant response
+                    // This prevents duplicate display during streaming
+                    if (nextMsg && nextMsg.role === 'assistant') {
+                        groups.push({
+                            question: msg.content,
+                            answer: nextMsg.content,
+                            sources: nextMsg.sources || [],
+                            showAllSources: false
+                        });
+                        i++; // Skip the assistant message in next iteration
+                    }
+                }
+            }
+            return groups;
+        },
+
+        async init() {
+            await this.loadCategories();
+            await this.loadConversations();
+            this.$nextTick(() => lucide.createIcons());
+        },
+
+        async loadCategories() {
+            this.categories = await fetch('/api/categories').then(r => r.json());
+        },
+
+        async loadConversations() {
+            this.conversations = await fetch('/api/chat/conversations').then(r => r.json());
+            this.$nextTick(() => lucide.createIcons());
+        },
+
+        async createConversation() {
+            const categoryIds = this.selectedCategories.length > 0 ? this.selectedCategories : null;
+            const response = await fetch('/api/chat/conversations', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    title: 'New Conversation',
+                    category_ids: categoryIds,
+                    use_maglib: this.useMaglib
+                }),
+            });
+            const conv = await response.json();
+            this.conversations.unshift(conv);
+            this.selectConversation(conv.id);
+        },
+
+        async createWithPrompt(prompt) {
+            await this.createConversation();
+            this.inputMessage = prompt;
+            this.$nextTick(() => {
+                const textarea = document.querySelector('textarea');
+                if (textarea) textarea.focus();
+            });
+        },
+
+        async selectConversation(id) {
+            this.currentConversationId = id;
+            const response = await fetch(`/api/chat/conversations/${id}`);
+            const conv = await response.json();
+            this.messages = conv.messages || [];
+            if (conv.category_ids) {
+                this.selectedCategories = conv.category_ids;
+            } else {
+                this.selectedCategories = [];
+            }
+            this.useMaglib = conv.use_maglib || false;
+            this.$nextTick(() => {
+                lucide.createIcons();
+                this.scrollToBottom();
+            });
+        },
+
+        async deleteConversation(id) {
+            if (!confirm('Delete this conversation?')) return;
+            await fetch(`/api/chat/conversations/${id}`, { method: 'DELETE' });
+            this.conversations = this.conversations.filter(c => c.id !== id);
+            if (this.currentConversationId === id) {
+                this.currentConversationId = null;
+                this.messages = [];
+            }
+        },
+
+        async sendMessage() {
+            if (!this.inputMessage.trim() || !this.currentConversationId || this.isStreaming) return;
+
+            const userMessage = this.inputMessage.trim();
+            this.inputMessage = '';
+            this.pendingQuestion = userMessage;
+
+            this.messages.push({ id: Date.now(), role: 'user', content: userMessage, sources: null });
+            this.$nextTick(() => { lucide.createIcons(); this.scrollToBottom(); });
+
+            const categoryIds = this.selectedCategories.length > 0 ? this.selectedCategories : null;
+            await fetch(`/api/chat/conversations/${this.currentConversationId}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ category_ids: categoryIds, use_maglib: this.useMaglib }),
+            });
+
+            this.isStreaming = true;
+            this.streamingContent = '';
+            this.streamingSources = [];
+
+            try {
+                const response = await fetch(`/api/chat/conversations/${this.currentConversationId}/messages`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message: userMessage, stream: true }),
+                });
+
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+
+                    const chunk = decoder.decode(value);
+                    const lines = chunk.split('\n').filter(l => l.trim());
+
+                    for (const line of lines) {
+                        try {
+                            const data = JSON.parse(line);
+                            if (data.type === 'content') {
+                                this.streamingContent += data.data;
+                                this.scrollToBottom();
+                            } else if (data.type === 'sources') {
+                                this.streamingSources = data.data;
+                            } else if (data.type === 'done') {
+                                this.messages.push({
+                                    id: Date.now(),
+                                    role: 'assistant',
+                                    content: this.streamingContent,
+                                    sources: this.streamingSources,
+                                });
+                            }
+                        } catch (e) {}
+                    }
+                }
+            } catch (error) {
+                this.messages.push({
+                    id: Date.now(),
+                    role: 'assistant',
+                    content: 'Sorry, an error occurred while processing your request.',
+                    sources: null,
+                });
+            }
+
+            this.isStreaming = false;
+            this.streamingContent = '';
+            this.pendingQuestion = '';
+            await this.loadConversations();
+            this.$nextTick(() => { lucide.createIcons(); this.scrollToBottom(); });
+        },
+
+        formatAnswer(content) {
+            if (!content) return '';
+            return content
+                .replace(/^### (.*$)/gm, '<h3>$1</h3>')
+                .replace(/^## (.*$)/gm, '<h2>$1</h2>')
+                .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                .replace(/\*(.*?)\*/g, '<em>$1</em>')
+                .replace(/`([^`]+)`/g, '<code>$1</code>')
+                .replace(/\[(\d+)\]/g, '<span class="citation">[$1]</span>')
+                .replace(/^\d+\. (.*$)/gm, '<li>$1</li>')
+                .replace(/^- (.*$)/gm, '<li>$1</li>')
+                .replace(/\n\n/g, '</p><p>')
+                .replace(/\n/g, '<br>')
+                .replace(/^(.*)$/, '<p>$1</p>')
+                .replace(/<p><\/p>/g, '')
+                .replace(/<p><br><\/p>/g, '');
+        },
+
+        formatDate(dateStr) {
+            if (!dateStr) return '';
+            const date = new Date(dateStr);
+            const now = new Date();
+            const diff = now - date;
+            const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+            if (days === 0) return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            if (days === 1) return 'Yesterday';
+            if (days < 7) return date.toLocaleDateString([], { weekday: 'short' });
+            return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
+        },
+
+        scrollToBottom() {
+            this.$nextTick(() => {
+                const container = this.$refs.messagesContainer;
+                if (container) container.scrollTop = container.scrollHeight;
+            });
+        },
+
+        autoResize(el) {
+            el.style.height = 'auto';
+            el.style.height = Math.min(el.scrollHeight, 200) + 'px';
+        },
+    }
+}
+</script>
+{% endblock %}

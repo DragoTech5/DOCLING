@@ -1,0 +1,82 @@
+{
+  "total_queries": 30,
+  "avg_precision_at_k": 0.06805555555555555,
+  "avg_recall": 0.4666666666666667,
+  "avg_source_hit_rate": 0.6277777777777778,
+  "avg_keyword_coverage": 0.9472222222222223,
+  "avg_answer_relevance": 0.0,
+  "avg_faithfulness": 0.0,
+  "failure_counts": {
+    "retrieval_failure": 0,
+    "generation_failure": 20,
+    "mixed_failure": 10,
+    "no_failure": 0
+  },
+  "failure_percentages": {
+    "retrieval_failure": 0.0,
+    "generation_failure": 66.66666666666666,
+    "mixed_failure": 33.33333333333333,
+    "no_failure": 0.0
+  },
+  "by_query_type": {
+    "comparison": {
+      "count": 5,
+      "avg_source_hit_rate": 0.3,
+      "avg_answer_relevance": 0.0,
+      "success_rate": 0.0
+    },
+    "negative": {
+      "count": 4,
+      "avg_source_hit_rate": 1.0,
+      "avg_answer_relevance": 0.0,
+      "success_rate": 0.0
+    },
+    "domain_specific": {
+      "count": 5,
+      "avg_source_hit_rate": 0.8,
+      "avg_answer_relevance": 0.0,
+      "success_rate": 0.0
+    },
+    "multi_hop": {
+      "count": 5,
+      "avg_source_hit_rate": 0.2,
+      "avg_answer_relevance": 0.0,
+      "success_rate": 0.0
+    },
+    "simple_factual": {
+      "count": 6,
+      "avg_source_hit_rate": 0.5555555555555555,
+      "avg_answer_relevance": 0.0,
+      "success_rate": 0.0
+    },
+    "ambiguous": {
+      "count": 5,
+      "avg_source_hit_rate": 1.0,
+      "avg_answer_relevance": 0.0,
+      "success_rate": 0.0
+    }
+  },
+  "by_difficulty": {
+    "easy": {
+      "count": 10,
+      "avg_source_hit_rate": 0.7333333333333333,
+      "avg_answer_relevance": 0.0,
+      "success_rate": 0.0
+    },
+    "medium": {
+      "count": 10,
+      "avg_source_hit_rate": 0.6,
+      "avg_answer_relevance": 0.0,
+      "success_rate": 0.0
+    },
+    "hard": {
+      "count": 10,
+      "avg_source_hit_rate": 0.55,
+      "avg_answer_relevance": 0.0,
+      "success_rate": 0.0
+    }
+  },
+  "avg_retrieval_time_ms": 3832.6637347539267,
+  "avg_generation_time_ms": 0.0,
+  "avg_total_time_ms": 3832.6637347539267
+}

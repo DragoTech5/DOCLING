@@ -1,0 +1,189 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div x-data="browse()" x-init="loadData()">
+    <!-- Filters -->
+    <div class="card p-5 mb-6 opacity-0 animate-slide-up">
+        <div class="flex flex-wrap items-end gap-4">
+            <div class="flex-1 min-w-[180px]">
+                <label class="block text-xs font-mono text-text-muted uppercase tracking-wider mb-2">Category</label>
+                <select x-model="filterCategory" @change="loadContent()" class="w-full rounded-lg px-3 py-2.5 text-sm">
+                    <option value="">All Categories</option>
+                    <template x-for="cat in categories" :key="cat.id">
+                        <option :value="cat.id" x-text="'─'.repeat(cat.depth || 0) + ' ' + cat.name"></option>
+                    </template>
+                </select>
+            </div>
+
+            <div class="flex-1 min-w-[180px]">
+                <label class="block text-xs font-mono text-text-muted uppercase tracking-wider mb-2">Source Type</label>
+                <select x-model="filterType" @change="loadContent()" class="w-full rounded-lg px-3 py-2.5 text-sm">
+                    <option value="">All Types</option>
+                    <option value="document">Documents</option>
+                    <option value="youtube_transcript">YouTube</option>
+                    <option value="website">Websites</option>
+                </select>
+            </div>
+
+            <div class="flex gap-1 bg-surface-0 p-1 rounded-lg">
+                <button @click="viewMode = 'grid'" :class="viewMode === 'grid' ? 'bg-blue text-crust' : 'text-text-muted hover:text-text'" class="p-2 rounded-md transition-colors">
+                    <i data-lucide="grid-3x3" class="w-4 h-4"></i>
+                </button>
+                <button @click="viewMode = 'list'" :class="viewMode === 'list' ? 'bg-blue text-crust' : 'text-text-muted hover:text-text'" class="p-2 rounded-md transition-colors">
+                    <i data-lucide="list" class="w-4 h-4"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Grid View -->
+    <div x-show="viewMode === 'grid'" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <template x-for="item in content" :key="item.id">
+            <div class="card p-5 hover:border-surface-2 transition-all group cursor-pointer" @click="showDetail(item)">
+                <div class="flex items-start justify-between mb-4">
+                    <div class="w-10 h-10 rounded-lg flex items-center justify-center"
+                         :class="{
+                             'bg-blue/10': item.source_type === 'document',
+                             'bg-red/10': item.source_type === 'youtube_transcript',
+                             'bg-sapphire/10': item.source_type === 'website'
+                         }">
+                        <i :data-lucide="getTypeIcon(item.source_type)"
+                           class="w-5 h-5"
+                           :class="{
+                               'text-blue': item.source_type === 'document',
+                               'text-red': item.source_type === 'youtube_transcript',
+                               'text-sapphire': item.source_type === 'website'
+                           }"></i>
+                    </div>
+                    <button @click.stop="deleteItem(item.id)" class="opacity-0 group-hover:opacity-100 p-1.5 text-text-muted hover:text-red hover:bg-red/10 rounded-lg transition-all">
+                        <i data-lucide="trash-2" class="w-4 h-4"></i>
+                    </button>
+                </div>
+
+                <h3 class="font-medium text-text text-sm mb-2 line-clamp-2" x-text="item.title"></h3>
+                <p class="text-xs text-text-muted line-clamp-3 mb-4" x-text="item.content_preview || 'No preview available'"></p>
+
+                <div class="flex items-center gap-3 pt-3 border-t border-surface-0">
+                    <span class="text-xs text-text-muted font-mono"><span x-text="item.word_count"></span> words</span>
+                    <span class="text-xs text-text-muted font-mono"><span x-text="item.chunk_count"></span> chunks</span>
+                </div>
+            </div>
+        </template>
+    </div>
+
+    <!-- List View -->
+    <div x-show="viewMode === 'list'" class="card overflow-hidden">
+        <table class="w-full">
+            <thead>
+                <tr class="bg-surface-0/50 text-left">
+                    <th class="px-5 py-3 text-xs font-mono font-medium text-text-muted uppercase tracking-wider">Title</th>
+                    <th class="px-5 py-3 text-xs font-mono font-medium text-text-muted uppercase tracking-wider">Type</th>
+                    <th class="px-5 py-3 text-xs font-mono font-medium text-text-muted uppercase tracking-wider">Words</th>
+                    <th class="px-5 py-3 text-xs font-mono font-medium text-text-muted uppercase tracking-wider">Chunks</th>
+                    <th class="px-5 py-3 text-xs font-mono font-medium text-text-muted uppercase tracking-wider">Added</th>
+                    <th class="px-5 py-3"></th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-surface-0">
+                <template x-for="item in content" :key="item.id">
+                    <tr class="hover:bg-surface-0/30 cursor-pointer transition-colors" @click="showDetail(item)">
+                        <td class="px-5 py-4">
+                            <div class="flex items-center gap-3">
+                                <div class="w-8 h-8 rounded-lg flex items-center justify-center"
+                                     :class="{
+                                         'bg-blue/10': item.source_type === 'document',
+                                         'bg-red/10': item.source_type === 'youtube_transcript',
+                                         'bg-sapphire/10': item.source_type === 'website'
+                                     }">
+                                    <i :data-lucide="getTypeIcon(item.source_type)"
+                                       class="w-4 h-4"
+                                       :class="{
+                                           'text-blue': item.source_type === 'document',
+                                           'text-red': item.source_type === 'youtube_transcript',
+                                           'text-sapphire': item.source_type === 'website'
+                                       }"></i>
+                                </div>
+                                <span class="text-sm text-text truncate max-w-xs" x-text="item.title"></span>
+                            </div>
+                        </td>
+                        <td class="px-5 py-4">
+                            <span class="text-xs font-mono text-text-muted px-2 py-1 bg-surface-0 rounded" x-text="item.source_type"></span>
+                        </td>
+                        <td class="px-5 py-4 text-sm text-text-muted font-mono" x-text="item.word_count"></td>
+                        <td class="px-5 py-4 text-sm text-text-muted font-mono" x-text="item.chunk_count"></td>
+                        <td class="px-5 py-4 text-sm text-text-muted" x-text="formatDate(item.created_at)"></td>
+                        <td class="px-5 py-4">
+                            <button @click.stop="deleteItem(item.id)" class="p-1.5 text-text-muted hover:text-red hover:bg-red/10 rounded-lg transition-all">
+                                <i data-lucide="trash-2" class="w-4 h-4"></i>
+                            </button>
+                        </td>
+                    </tr>
+                </template>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Empty State -->
+    <div x-show="content.length === 0 && !loading" class="text-center py-20">
+        <div class="w-20 h-20 mx-auto mb-6 rounded-2xl bg-surface-0 flex items-center justify-center">
+            <i data-lucide="database" class="w-10 h-10 text-text-muted"></i>
+        </div>
+        <p class="text-text text-lg font-medium mb-2">No content found</p>
+        <p class="text-text-muted text-sm mb-6">Upload documents or process YouTube videos to get started</p>
+        <a href="/ingest" class="btn-primary px-6 py-2.5 rounded-lg text-sm inline-block">Add Content</a>
+    </div>
+</div>
+
+<script>
+function browse() {
+    return {
+        categories: [],
+        content: [],
+        filterCategory: '',
+        filterType: '',
+        viewMode: 'grid',
+        loading: false,
+
+        async loadData() {
+            this.categories = await fetch('/api/categories').then(r => r.json());
+            await this.loadContent();
+            this.$nextTick(() => lucide.createIcons());
+        },
+
+        async loadContent() {
+            this.loading = true;
+            let url = '/api/documents?limit=100';
+            if (this.filterCategory) url += `&category_id=${this.filterCategory}`;
+            if (this.filterType) url += `&source_type=${this.filterType}`;
+
+            this.content = await fetch(url).then(r => r.json());
+            this.loading = false;
+            this.$nextTick(() => lucide.createIcons());
+        },
+
+        getTypeIcon(type) {
+            const icons = {
+                'document': 'file-text',
+                'youtube_transcript': 'youtube',
+                'website': 'globe',
+            };
+            return icons[type] || 'file';
+        },
+
+        formatDate(dateStr) {
+            return new Date(dateStr).toLocaleDateString();
+        },
+
+        showDetail(item) {
+            console.log('Show detail:', item);
+        },
+
+        async deleteItem(id) {
+            if (!confirm('Are you sure you want to delete this item?')) return;
+            await fetch(`/api/documents/${id}`, { method: 'DELETE' });
+            this.loadContent();
+        },
+    }
+}
+</script>
+{% endblock %}

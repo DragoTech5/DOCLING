@@ -1,0 +1,145 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div x-data="queryPage()" x-init="loadCategories()" class="max-w-4xl mx-auto">
+    <!-- Search Card -->
+    <div class="card p-6 mb-6 opacity-0 animate-slide-up">
+        <!-- Search Input -->
+        <div class="relative mb-5">
+            <i data-lucide="search" class="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-text-muted"></i>
+            <input type="text"
+                   x-model="query"
+                   @keyup.enter="search()"
+                   placeholder="Search your knowledge base..."
+                   class="w-full rounded-xl pl-12 pr-4 py-4 text-base">
+        </div>
+
+        <!-- Category Chips -->
+        <div class="flex flex-wrap gap-2 mb-5">
+            <button @click="toggleCategory(null)"
+                    :class="selectedCategories.length === 0 ? 'bg-blue text-crust' : 'bg-surface-0 text-text-sub hover:bg-surface-1'"
+                    class="px-4 py-2 rounded-full text-xs font-medium transition-colors">
+                All Categories
+            </button>
+            <template x-for="cat in categories" :key="cat.id">
+                <button @click="toggleCategory(cat.id)"
+                        :class="selectedCategories.includes(cat.id) ? 'text-crust' : 'bg-surface-0 text-text-sub hover:bg-surface-1'"
+                        :style="selectedCategories.includes(cat.id) ? `background: ${cat.color}` : ''"
+                        class="px-4 py-2 rounded-full text-xs font-medium transition-colors flex items-center gap-2">
+                    <span class="w-2 h-2 rounded-full" :style="`background: ${cat.color}`" x-show="!selectedCategories.includes(cat.id)"></span>
+                    <span x-text="cat.name"></span>
+                </button>
+            </template>
+        </div>
+
+        <button @click="search()"
+                :disabled="!query || searching"
+                class="btn-primary px-6 py-2.5 rounded-lg text-sm">
+            <span x-show="!searching">Search</span>
+            <span x-show="searching" class="flex items-center gap-2">
+                <svg class="animate-spin h-4 w-4" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                Searching...
+            </span>
+        </button>
+    </div>
+
+    <!-- Results -->
+    <div x-show="results.length > 0" class="space-y-4">
+        <p class="text-sm text-text-muted font-mono">
+            <span x-text="results.length"></span> results found
+        </p>
+
+        <template x-for="(result, index) in results" :key="index">
+            <div class="card p-5 hover:border-surface-2 transition-colors opacity-0 animate-slide-up" :style="`animation-delay: ${index * 0.05}s`">
+                <div class="flex items-start justify-between mb-3">
+                    <div class="flex items-center gap-2">
+                        <span class="text-sm font-medium text-peach" x-text="result.metadata.title || 'Unknown'"></span>
+                        <span class="text-xs font-mono text-text-muted px-2 py-0.5 bg-surface-0 rounded" x-text="result.metadata.source_type || 'document'"></span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <div class="w-16 h-1.5 bg-surface-0 rounded-full overflow-hidden">
+                            <div class="h-full bg-gradient-to-r from-peach to-yellow transition-all"
+                                 :style="`width: ${result.score * 100}%`"></div>
+                        </div>
+                        <span class="text-xs text-text-muted font-mono" x-text="(result.score * 100).toFixed(0) + '%'"></span>
+                    </div>
+                </div>
+                <p class="text-sm text-text-sub leading-relaxed" x-text="result.text"></p>
+            </div>
+        </template>
+    </div>
+
+    <!-- Empty State -->
+    <div x-show="!searching && results.length === 0 && searched" class="text-center py-16">
+        <div class="w-16 h-16 mx-auto mb-4 rounded-xl bg-surface-0 flex items-center justify-center">
+            <i data-lucide="search-x" class="w-8 h-8 text-text-muted"></i>
+        </div>
+        <p class="text-text font-medium">No results found</p>
+        <p class="text-text-muted text-sm mt-1">Try different keywords or broaden your category selection</p>
+    </div>
+
+    <!-- Initial State -->
+    <div x-show="!searched" class="text-center py-16">
+        <div class="w-16 h-16 mx-auto mb-4 rounded-xl bg-blue/10 flex items-center justify-center">
+            <i data-lucide="sparkles" class="w-8 h-8 text-blue"></i>
+        </div>
+        <p class="text-text font-medium">Semantic Search</p>
+        <p class="text-text-muted text-sm mt-1">Find relevant information using natural language</p>
+    </div>
+</div>
+
+<script>
+function queryPage() {
+    return {
+        query: '',
+        categories: [],
+        selectedCategories: [],
+        results: [],
+        searching: false,
+        searched: false,
+
+        async loadCategories() {
+            this.categories = await fetch('/api/categories').then(r => r.json());
+        },
+
+        toggleCategory(catId) {
+            if (catId === null) {
+                this.selectedCategories = [];
+            } else {
+                const idx = this.selectedCategories.indexOf(catId);
+                if (idx > -1) {
+                    this.selectedCategories.splice(idx, 1);
+                } else {
+                    this.selectedCategories.push(catId);
+                }
+            }
+        },
+
+        async search() {
+            if (!this.query) return;
+
+            this.searching = true;
+            this.searched = true;
+
+            try {
+                const response = await fetch('/api/query', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        query: this.query,
+                        category_ids: this.selectedCategories.length > 0 ? this.selectedCategories : null,
+                        limit: 20,
+                    }),
+                });
+                const data = await response.json();
+                this.results = data.results;
+            } catch (e) {
+                console.error('Search error:', e);
+            }
+
+            this.searching = false;
+        },
+    }
+}
+</script>
+{% endblock %}
