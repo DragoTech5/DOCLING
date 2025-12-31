@@ -37,8 +37,8 @@ telegram-mini-app/build/
 # Environment files (don't include secrets)
 .env
 .env.local
-.env.railway
 .env.*.local
+# Note: .env.railway is intentionally NOT excluded - needed for Railway deployment
 
 # Logs and temp
 *.log
