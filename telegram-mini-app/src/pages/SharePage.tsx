@@ -1,9 +1,42 @@
-import { useEffect, useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import ReactMarkdown from 'react-markdown'
 import { hapticFeedback } from '@/lib/telegram'
 import { clsx } from 'clsx'
 import type { Source } from '@/types'
+
+// Helper function to style citation text (references like [1], [2], etc.)
+const styledCitationText = (text: string): (string | React.ReactElement)[] => {
+  const citationRegex = /\[(\d+)\]/g
+  const parts = text.split(citationRegex)
+  return parts.map((part, idx) => {
+    // Even indices are text, odd indices are citation numbers
+    if (idx % 2 === 1) {
+      return (
+        <span key={idx} className="text-cyan-400 font-semibold">
+          {`[${part}]`}
+        </span>
+      )
+    }
+    return part
+  })
+}
+
+// Helper function to process children and style citations
+const processCitations = (children: any): any => {
+  if (typeof children === 'string') {
+    return styledCitationText(children)
+  }
+  if (Array.isArray(children)) {
+    return children.map((child, idx) => {
+      if (typeof child === 'string') {
+        return <span key={idx}>{styledCitationText(child)}</span>
+      }
+      return child
+    })
+  }
+  return children
+}
 
 interface Message {
   id: string
@@ -168,13 +201,13 @@ export default function SharePage() {
                                 {children}
                               </a>
                             ),
-                            p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
+                            p: ({ children }) => <p className="mb-2 last:mb-0">{processCitations(children)}</p>,
                             ul: ({ children }) => <ul className="list-disc list-inside mb-2 space-y-1">{children}</ul>,
                             ol: ({ children }) => <ol className="list-decimal list-inside mb-2 space-y-1">{children}</ol>,
-                            li: ({ children }) => <li className="text-tg-text">{children}</li>,
-                            h1: ({ children }) => <h1 className="text-lg font-bold mb-2">{children}</h1>,
-                            h2: ({ children }) => <h2 className="text-base font-bold mb-2">{children}</h2>,
-                            h3: ({ children }) => <h3 className="text-sm font-bold mb-1">{children}</h3>,
+                            li: ({ children }) => <li className="text-tg-text">{processCitations(children)}</li>,
+                            h1: ({ children }) => <h1 className="text-lg font-bold mb-2">{processCitations(children)}</h1>,
+                            h2: ({ children }) => <h2 className="text-base font-bold mb-2">{processCitations(children)}</h2>,
+                            h3: ({ children }) => <h3 className="text-sm font-bold mb-1">{processCitations(children)}</h3>,
                             code: ({ children, className }) => {
                               const isBlock = className?.includes('language-')
                               return isBlock ? (
@@ -184,9 +217,9 @@ export default function SharePage() {
                               )
                             },
                             blockquote: ({ children }) => (
-                              <blockquote className="border-l-2 border-tg-hint pl-3 italic text-tg-hint">{children}</blockquote>
+                              <blockquote className="border-l-2 border-tg-hint pl-3 italic text-tg-hint">{processCitations(children)}</blockquote>
                             ),
-                            strong: ({ children }) => <strong className="font-semibold">{children}</strong>,
+                            strong: ({ children }) => <strong className="font-semibold">{processCitations(children)}</strong>,
                           }}
                         >
                           {message.content}
