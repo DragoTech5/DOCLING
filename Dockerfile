@@ -1,4 +1,5 @@
 # Multi-stage build for Docling hybrid monorepo (Python backend + React/Node.js frontend)
+# Retry: Attempting deployment again to resolve transient infrastructure issues (exit code 137)
 
 # Stage 1: Build frontend (Node.js/Vite)
 FROM node:22-alpine AS frontend-builder
