@@ -30,13 +30,19 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-# Install system dependencies for Python packages (PostgreSQL client libs, SSH, build tools)
+# Install system dependencies for Python packages (PostgreSQL client libs, SSH, build tools, ML libraries)
 # Use single RUN command with proper apt caching to avoid timeouts
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     postgresql-client \
     openssh-client \
     git \
+    python3-dev \
+    libjpeg-dev \
+    libpng-dev \
+    libfreetype6-dev \
+    libssl-dev \
+    libffi-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy Python requirements and install dependencies
