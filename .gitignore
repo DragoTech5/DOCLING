@@ -21,8 +21,8 @@ out/
 # Environment
 .env
 .env.local
-.env.railway
 .env.*.local
+# Note: .env.railway is intentionally NOT ignored - needed for Railway deployment
 
 # IDE
 .vscode/
