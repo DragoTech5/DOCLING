@@ -7,6 +7,7 @@ import os
 import json
 import logging
 from typing import Annotated
+from pydantic import BaseModel
 
 import aiosqlite
 from fastapi import APIRouter, Depends, Request, HTTPException, Header
@@ -28,9 +29,13 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/payments/dodo", tags=["payments"])
 
 
+class DodoCheckoutRequest(BaseModel):
+    tier: str
+
+
 @router.post("/create-checkout")
 async def create_dodo_checkout(
-    tier: str,
+    request_data: DodoCheckoutRequest,
     user: Annotated[TelegramUser, Depends(get_current_telegram_user)],
 ):
     """
@@ -38,7 +43,7 @@ async def create_dodo_checkout(
 
     Returns checkout URL for user to complete payment via credit card.
 
-    Query Parameters:
+    Request Body:
         tier: Subscription tier (starter, pro, unlimited, etc.)
 
     Returns:
@@ -49,6 +54,8 @@ async def create_dodo_checkout(
             "amount_usd": 9.99
         }
     """
+    tier = request_data.tier
+
     # Validate tier exists and is not free
     tier_config = TIER_LIMITS.get(tier)
     if not tier_config:
