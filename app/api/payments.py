@@ -93,7 +93,7 @@ async def create_dodo_checkout(
         tier=tier,
         amount_usd=amount_usd,
         expires_at=session["expires_at"],
-        customer_email=user.email,
+        customer_email=f"{user.id}@telegram.user",
     )
 
     return {
