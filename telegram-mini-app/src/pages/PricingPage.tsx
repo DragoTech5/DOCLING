@@ -1,10 +1,11 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '@/stores/authStore'
 import { useSubscriptionStore } from '@/stores/subscriptionStore'
 import { TIER_LIMITS, type SubscriptionTier } from '@/types'
 import { hapticFeedback, showBackButton, hideBackButton, showAlert } from '@/lib/telegram'
 import BottomNav from '@/components/BottomNav'
+import PaymentMethodSelector from '@/components/PaymentMethodSelector'
 import { clsx } from 'clsx'
 import { SHOW_DOCUMENT_LIMITS } from '@/config/features'
 
@@ -30,20 +31,11 @@ const tierColors: Record<SubscriptionTier, string> = {
   researcher: 'border-cyan-500/35',  // Legacy alias
 }
 
-const paymentMethods: Record<SubscriptionTier, string | null> = {
-  free: null,
-  starter: 'Telegram Stars',
-  pro: 'Telegram Stars',
-  unlimited: 'Telegram Stars',
-  enterprise: 'Telegram Stars',
-  scholar: 'Telegram Stars',  // Legacy alias
-  researcher: 'Telegram Stars',  // Legacy alias
-}
-
 export default function PricingPage() {
   const navigate = useNavigate()
   const { profile } = useAuthStore()
   const { subscribe, isProcessing } = useSubscriptionStore()
+  const [selectedTierForPayment, setSelectedTierForPayment] = useState<SubscriptionTier | null>(null)
 
   const currentTier = profile?.tier || 'free'
 
@@ -51,21 +43,38 @@ export default function PricingPage() {
   useEffect(() => {
     showBackButton(() => {
       hapticFeedback('light')
-      navigate('/')
+      if (selectedTierForPayment) {
+        setSelectedTierForPayment(null)
+      } else {
+        navigate('/')
+      }
     })
     return () => hideBackButton()
-  }, [navigate])
+  }, [navigate, selectedTierForPayment])
 
-  const handleSubscribe = async (tier: SubscriptionTier) => {
+  const handleSubscribeClick = (tier: SubscriptionTier) => {
     if (tier === currentTier || tier === 'free') return
 
     hapticFeedback('medium')
-    const success = await subscribe(tier)
+    setSelectedTierForPayment(tier)
+  }
+
+  const handlePaymentMethodSelect = async (method: 'telegram_stars' | 'dodo') => {
+    if (!selectedTierForPayment) return
+
+    const success = await subscribe(selectedTierForPayment, method)
 
     if (success) {
       await showAlert('Subscription activated! Enjoy your new plan.')
+      setSelectedTierForPayment(null)
       navigate('/')
+    } else {
+      setSelectedTierForPayment(null)
     }
+  }
+
+  const handleCancelPayment = () => {
+    setSelectedTierForPayment(null)
   }
 
   return (
@@ -130,11 +139,6 @@ export default function PricingPage() {
                         </p>
                         <p className="text-xs text-gray-500">/month</p>
                       </>
-                    )}
-                    {paymentMethods[tier] && (
-                      <p className="text-xs text-blue-400 mt-2 font-medium">
-                        {paymentMethods[tier]}
-                      </p>
                     )}
                   </div>
                 </div>
@@ -202,7 +206,7 @@ export default function PricingPage() {
                 {/* Action button */}
                 {isUpgrade && tier !== 'free' && (
                   <button
-                    onClick={() => handleSubscribe(tier)}
+                    onClick={() => handleSubscribeClick(tier)}
                     disabled={isProcessing}
                     className={clsx(
                       'w-full py-3 rounded-xl font-semibold text-sm transition-all',
@@ -265,6 +269,16 @@ export default function PricingPage() {
       </main>
 
       <BottomNav />
+
+      {/* Payment Method Selector Modal */}
+      {selectedTierForPayment && (
+        <PaymentMethodSelector
+          tier={selectedTierForPayment}
+          onSelectPaymentMethod={handlePaymentMethodSelect}
+          onCancel={handleCancelPayment}
+          isLoading={isProcessing}
+        />
+      )}
     </div>
   )
 }

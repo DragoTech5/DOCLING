@@ -11,7 +11,7 @@ interface SubscriptionState {
   lastPaymentStatus: 'paid' | 'cancelled' | 'failed' | 'pending' | null
 
   // Actions
-  subscribe: (tier: SubscriptionTier) => Promise<boolean>
+  subscribe: (tier: SubscriptionTier, paymentMethod?: 'telegram_stars' | 'dodo') => Promise<boolean>
   purchaseTokens: (bundleId: string) => Promise<boolean>
   getTierInfo: (tier: SubscriptionTier) => typeof TIER_LIMITS[SubscriptionTier]
   canSelectMorePdfs: (currentCount: number) => boolean
@@ -22,17 +22,17 @@ export const useSubscriptionStore = create<SubscriptionState>((set) => ({
   isProcessing: false,
   lastPaymentStatus: null,
 
-  subscribe: async (tier: SubscriptionTier) => {
+  subscribe: async (tier: SubscriptionTier, paymentMethod?: 'telegram_stars' | 'dodo') => {
     if (tier === 'free') return true
 
     set({ isProcessing: true })
 
-    // Determine payment method based on tier
-    const isDodoPayment = tier === 'researcher' || tier === 'unlimited'
+    // Use provided payment method or auto-detect (default: Telegram Stars)
+    const isDodoPayment = paymentMethod === 'dodo'
 
     try {
       if (isDodoPayment) {
-        // Dodo Payments flow for researcher and unlimited tiers
+        // Dodo Payments flow for credit card payments
         const initData = window.Telegram?.WebApp?.initData
 
         const response = await fetch('/api/payments/dodo/create-checkout', {
@@ -64,7 +64,7 @@ export const useSubscriptionStore = create<SubscriptionState>((set) => ({
         set({ isProcessing: false, lastPaymentStatus: 'pending' })
         return true
       } else {
-        // Telegram Stars flow for scholar and other tiers
+        // Telegram Stars flow (default for all payment methods)
         const result = await api.createSubscriptionInvoice(tier)
         if (!result.success || !result.data?.invoiceUrl) {
           set({ isProcessing: false, lastPaymentStatus: 'failed' })
