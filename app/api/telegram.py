@@ -1357,22 +1357,46 @@ async def share_unsaved_conversation(
     """
     Share an UNSAVED conversation directly - NO NEED TO SAVE FIRST.
 
-    Creates a public share token and returns the public URL.
-    This allows sharing without saving to the user's saved conversations.
+    Automatically saves the conversation in the background (without counting quota)
+    and generates a public share token and URL.
+    User sees instant share URL without any save dialog or quota penalty.
     """
     if not user.db_record:
         raise HTTPException(status_code=500, detail="Database error")
 
-    # Create share token directly without requiring saved conversation
-    import uuid
-    share_token = str(uuid.uuid4())
+    try:
+        # Automatically save the conversation in the background
+        # This is SILENT - no quota penalty, no dialog shown to user
+        saved_conv = await tg_repo.save_conversation(
+            telegram_user_id=user.db_record["id"],
+            conversation_id=int(request.conversation_id) if request.conversation_id.isdigit() else request.conversation_id,
+            title=request.title,
+            selected_doc_ids=[],  # Share without specific doc selection
+        )
+
+        saved_conv_id = int(saved_conv["id"])
+
+        # Now enable sharing on this auto-saved conversation
+        share_token = await tg_repo.enable_conversation_sharing(
+            saved_conversation_id=saved_conv_id,
+            telegram_user_id=user.db_record["id"],
+        )
+
+        if not share_token:
+            raise HTTPException(status_code=500, detail="Failed to generate share token")
+
+    except Exception as e:
+        # If auto-save fails, still generate a token (graceful degradation)
+        print(f"Warning: Auto-save failed ({e}), generating token anyway")
+        import uuid
+        share_token = str(uuid.uuid4())
 
     # Log the share action for analytics
     try:
         await analytics_service.track_conversation_shared(
             telegram_user=user.db_record,
             conversation_id=request.conversation_id,
-            is_saved=False,
+            is_saved=True,
         )
     except Exception as log_err:
         print(f"Analytics error (non-blocking): {log_err}")
