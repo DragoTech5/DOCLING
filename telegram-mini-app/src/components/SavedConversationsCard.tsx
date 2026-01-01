@@ -25,7 +25,7 @@ export default function SavedConversationsCard() {
         setLoading(true)
         const response = await fetch('/api/telegram/saved-conversations', {
           headers: {
-            'X-Telegram-Init-Data': `user=${profile?.telegramId}`,
+            'X-Telegram-Init-Data': window.Telegram?.WebApp?.initData || '',
           },
         })
 
@@ -62,7 +62,7 @@ export default function SavedConversationsCard() {
         `/api/telegram/saved-conversations/${savedConvId}`,
         {
           headers: {
-            'X-Telegram-Init-Data': `user=${profile?.telegramId}`,
+            'X-Telegram-Init-Data': window.Telegram?.WebApp?.initData || '',
           },
         }
       )
