@@ -157,44 +157,92 @@ export default function SharePage() {
         }}
         style={{
           background: 'linear-gradient(135deg, rgba(0, 20, 40, 0.95) 0%, rgba(10, 35, 55, 0.95) 100%)',
-          borderBottom: '1px solid rgba(6, 182, 212, 0.3)',
-          padding: '12px 16px',
+          borderBottom: '2px solid rgba(6, 182, 212, 0.4)',
+          padding: '14px 16px',
           cursor: 'pointer',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          gap: '12px',
+          gap: '14px',
           zIndex: 50,
+          position: 'relative',
+          overflow: 'hidden',
         }}
-        className="hover:bg-opacity-90 transition-all"
+        className="hover:bg-opacity-90 transition-all group"
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1 }}>
-          <span style={{ fontSize: '20px' }}>🚀</span>
-          <div style={{ minWidth: 0 }}>
+        {/* Subtle glow effect */}
+        <div style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'radial-gradient(ellipse at center, rgba(6, 182, 212, 0.05) 0%, transparent 70%)',
+          pointerEvents: 'none',
+        }} />
+
+        {/* Logo and Content Container */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flex: 1, minWidth: 0, position: 'relative', zIndex: 1 }}>
+          {/* Logo Image */}
+          <img
+            src="/logo-new.png"
+            alt="Akasha AI"
+            style={{
+              height: '44px',
+              width: 'auto',
+              maxWidth: '44px',
+              flexShrink: 0,
+              objectFit: 'contain',
+              filter: 'drop-shadow(0 0 8px rgba(6, 182, 212, 0.3))',
+            }}
+          />
+
+          {/* Text Content */}
+          <div style={{ minWidth: 0, display: 'flex', flexDirection: 'column', gap: '3px' }}>
+            {/* Main headline */}
             <p style={{
               color: '#06B6D4',
-              margin: '0 0 2px 0',
-              fontSize: '13px',
-              fontWeight: '600',
-              textOverflow: 'ellipsis',
-              overflow: 'hidden',
-              whiteSpace: 'nowrap'
-            }}>
-              Join Akasha AI on Telegram
-            </p>
-            <p style={{
-              color: '#9CA3AF',
               margin: 0,
-              fontSize: '11px',
+              fontSize: '12px',
+              fontWeight: '700',
+              letterSpacing: '0.5px',
               textOverflow: 'ellipsis',
               overflow: 'hidden',
-              whiteSpace: 'nowrap'
+              whiteSpace: 'nowrap',
             }}>
-              Access unlimited knowledge now
+              AKASHA AI — Knowledge Unleashed
+            </p>
+            {/* Subheadline with description */}
+            <p style={{
+              color: '#D0D8E0',
+              margin: 0,
+              fontSize: '10.5px',
+              fontWeight: '500',
+              lineHeight: '1.3',
+              textOverflow: 'ellipsis',
+              overflow: 'hidden',
+              display: '-webkit-box',
+              WebkitLineClamp: 2,
+              WebkitBoxOrient: 'vertical',
+            }}>
+              The Ultimate Uncensored Library • Join Telegram
             </p>
           </div>
         </div>
-        <span style={{ color: '#06B6D4', fontSize: '18px', flexShrink: 0 }}>→</span>
+
+        {/* Arrow indicator */}
+        <span style={{
+          color: '#06B6D4',
+          fontSize: '16px',
+          flexShrink: 0,
+          position: 'relative',
+          zIndex: 1,
+          fontWeight: 'bold',
+          opacity: 0.8,
+          transition: 'opacity 0.2s ease',
+        }} className="group-hover:opacity-100">
+          →
+        </span>
       </div>
 
       {/* Header */}
