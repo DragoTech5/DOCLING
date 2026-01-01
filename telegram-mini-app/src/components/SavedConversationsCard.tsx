@@ -84,24 +84,6 @@ export default function SavedConversationsCard() {
     }
   }
 
-  // Free tier - no saved conversations
-  if (profile?.tier === 'free') {
-    return (
-      <div className="relative overflow-hidden rounded-xl border border-cyan-500/20 bg-black/20 p-4 backdrop-blur-sm">
-        <div className="absolute inset-0 -z-10 bg-gradient-to-br from-cyan-500/5 to-transparent opacity-0 transition-opacity" />
-        <h2 className="text-sm font-semibold text-cyan-400 mb-3">Saved Conversations</h2>
-        <p className="text-xs text-gray-500 mb-3">
-          Upgrade to Starter tier or higher to save and organize your conversations.
-        </p>
-        <button
-          onClick={() => navigate('/pricing')}
-          className="w-full bg-gradient-to-r from-cyan-600 to-cyan-500 rounded-lg py-2 text-center text-dark font-medium text-sm hover:from-cyan-500 hover:to-cyan-400 transition-all"
-        >
-          View Plans
-        </button>
-      </div>
-    )
-  }
 
   // Loading state
   if (loading) {
