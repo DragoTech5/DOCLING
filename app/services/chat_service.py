@@ -523,7 +523,7 @@ def build_messages(
     if context:
         if has_conversation_history:
             # With conversation history: Reference previous messages AND new context
-            augmented_message = f"""Building on our previous conversation, please answer my new question using both what we've discussed and the following context from my knowledge base.
+            augmented_message = f"""Building on our previous conversation, please answer my new question using both what we've discussed and the following context from the current knowledge base.
 
 CONTEXT:
 {context}
@@ -534,7 +534,7 @@ MY NEW QUESTION:
 Remember to cite sources using [1], [2], etc. based on the context numbers provided. Feel free to reference points from our earlier discussion if they're relevant."""
         else:
             # No conversation history: Just use new context
-            augmented_message = f"""Based on the following context from my knowledge base, please answer my question.
+            augmented_message = f"""Based on the following context from the current knowledge base, please answer my question.
 
 CONTEXT:
 {context}
@@ -546,7 +546,7 @@ Remember to cite sources using [1], [2], etc. based on the context numbers provi
     else:
         augmented_message = f"""{user_message}
 
-Note: I couldn't find relevant information in the knowledge base for this question. Please let me know if you need more specific information or if I should search differently."""
+Note: I couldn't find relevant information in the current knowledge base for this question. Please let me know if you need more specific information or if I should search differently."""
 
     messages.append({"role": "user", "content": augmented_message})
 
