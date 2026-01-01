@@ -77,7 +77,7 @@ async def create_dodo_checkout(
         session = await dodo_service.create_checkout_session(
             tier=tier,
             amount_usd=amount_usd,
-            customer_email=user.email or f"{user.telegram_id}@telegram.user",
+            customer_email=f"{user.id}@telegram.user",
             telegram_user_id=user.db_record["id"],
             return_url_success=f"{app_url}/twa/payment-success?tier={tier}",
             return_url_failure=f"{app_url}/twa/payment-failure",
