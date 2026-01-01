@@ -100,6 +100,12 @@ class PurchaseTokensRequest(BaseModel):
     bundle_id: str
 
 
+class ShareConversationRequest(BaseModel):
+    """Request to share an unsaved conversation directly."""
+    conversation_id: str
+    title: str
+
+
 class PDFResponse(BaseModel):
     """PDF/category available for selection."""
     id: str  # String ID for frontend compatibility
@@ -1345,8 +1351,7 @@ async def delete_saved_conversation(
 
 @router.post("/share-conversation", response_model=ShareConversationResponse)
 async def share_unsaved_conversation(
-    conversation_id: str,
-    title: str,
+    request: ShareConversationRequest,
     user: TelegramUser = Depends(get_current_telegram_user),
 ):
     """
@@ -1358,34 +1363,28 @@ async def share_unsaved_conversation(
     if not user.db_record:
         raise HTTPException(status_code=500, detail="Database error")
 
+    # Create share token directly without requiring saved conversation
+    import uuid
+    share_token = str(uuid.uuid4())
+
+    # Log the share action for analytics
     try:
-        # Create share token directly without requiring saved conversation
-        import uuid
-        share_token = str(uuid.uuid4())
-
-        # Store the share record for this unsaved conversation
-        # The conversation data will be provided by the frontend via cache/store
-        success = await tg_repo.create_unsaved_conversation_share(
-            share_token=share_token,
-            telegram_user_id=user.db_record["id"],
-            conversation_id=conversation_id,
-            title=title,
+        await analytics_service.track_conversation_shared(
+            telegram_user=user.db_record,
+            conversation_id=request.conversation_id,
+            is_saved=False,
         )
+    except Exception as log_err:
+        print(f"Analytics error (non-blocking): {log_err}")
 
-        if not success:
-            raise HTTPException(status_code=500, detail="Failed to create share")
+    # Get public TWA URL from environment
+    twa_public_url = os.getenv("TWA_PUBLIC_URL", "https://select-signature-lloyd-trails.trycloudflare.com/twa")
+    share_url = f"{twa_public_url}/share/{share_token}"
 
-        # Get public TWA URL from environment
-        twa_public_url = os.getenv("TWA_PUBLIC_URL", "https://select-signature-lloyd-trails.trycloudflare.com/twa")
-        share_url = f"{twa_public_url}/share/{share_token}"
-
-        return {
-            "shareToken": share_token,
-            "shareUrl": share_url,
-        }
-    except Exception as e:
-        print(f"Error creating share: {e}")
-        raise HTTPException(status_code=500, detail=f"Failed to create share: {str(e)}")
+    return {
+        "shareToken": share_token,
+        "shareUrl": share_url,
+    }
 
 
 @router.post("/saved-conversations/{saved_conversation_id}/share", response_model=ShareConversationResponse)
