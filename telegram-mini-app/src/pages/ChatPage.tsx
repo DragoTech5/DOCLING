@@ -603,7 +603,7 @@ export default function ChatPage() {
     }
   }
 
-  // Handle sharing conversation
+  // Handle sharing conversation - NO SAVE REQUIRED
   const handleShareConversation = async () => {
     if (!currentConversation?.id || !currentConversation.messages || currentConversation.messages.length === 0) {
       setShareError('No messages to share')
@@ -616,56 +616,25 @@ export default function ChatPage() {
       setShareUrl(null)
 
       const initData = window.Telegram?.WebApp?.initData || ''
+      const title = currentConversation.messages[0]?.content?.slice(0, 50) + '...' || 'Untitled Chat'
 
-      // If conversation is unsaved (starts with 'new-'), save it first
-      let conversationIdToShare = currentConversation.id
-      if (currentConversation.id.startsWith('new-')) {
-        console.log('Conversation unsaved, auto-saving before sharing...')
-        const title = currentConversation.messages[0]?.content?.slice(0, 50) + '...' || 'Untitled Chat'
-        const saveResponse = await fetch('/api/telegram/saved-conversations', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'X-Telegram-Init-Data': initData,
-          },
-          body: JSON.stringify({
-            conversationId: currentConversation.id,
-            title,
-            selectedDocIds: selectedPdfIds,
-          }),
-        })
-
-        if (!saveResponse.ok) {
-          const errorData = await saveResponse.json()
-          setShareError(errorData.detail || 'Failed to save conversation before sharing')
-          return
-        }
-
-        const savedData = await saveResponse.json()
-        conversationIdToShare = savedData.id
-        // Update conversation ID so subsequent operations use the saved ID
-        setCurrentConversation({
-          ...currentConversation,
-          id: conversationIdToShare,
-        })
-      }
-
-      // Now share the conversation (saved or already was saved)
-      const response = await fetch(`/api/telegram/saved-conversations/${conversationIdToShare}/share`, {
+      // DIRECT SHARE - NO SAVE REQUIRED
+      // Call the new share endpoint that works with unsaved conversations
+      const response = await fetch('/api/telegram/share-conversation', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'X-Telegram-Init-Data': initData,
         },
+        body: JSON.stringify({
+          conversation_id: currentConversation.id,
+          title: title,
+        }),
       })
 
       if (!response.ok) {
         const errorData = await response.json()
-        if (response.status === 404) {
-          setShareError('Conversation not found. Please save it first.')
-        } else {
-          setShareError(errorData.detail || 'Failed to share conversation')
-        }
+        setShareError(errorData.detail || 'Failed to share conversation')
         return
       }
 
@@ -673,16 +642,16 @@ export default function ChatPage() {
       const url = data.shareUrl
       setShareUrl(url)
 
-      // Auto-copy to clipboard (no modal, just notification)
+      // Auto-copy to clipboard
       navigator.clipboard.writeText(url).then(() => {
-        console.log('✅ Share link copied to clipboard:', url)
+        console.log('✅ URL COPIED SUCCESSFULLY:', url)
         hapticFeedback('success')
         // Show temporary notification
         setShareCopiedNotification(true)
         // Hide notification after 3 seconds
         setTimeout(() => setShareCopiedNotification(false), 3000)
-      }).catch(() => {
-        console.error('Failed to copy to clipboard')
+      }).catch((err) => {
+        console.error('Failed to copy to clipboard:', err)
         hapticFeedback('light')
       })
     } catch (err) {

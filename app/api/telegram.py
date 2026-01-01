@@ -1343,6 +1343,51 @@ async def delete_saved_conversation(
     return {"success": True}
 
 
+@router.post("/share-conversation", response_model=ShareConversationResponse)
+async def share_unsaved_conversation(
+    conversation_id: str,
+    title: str,
+    user: TelegramUser = Depends(get_current_telegram_user),
+):
+    """
+    Share an UNSAVED conversation directly - NO NEED TO SAVE FIRST.
+
+    Creates a public share token and returns the public URL.
+    This allows sharing without saving to the user's saved conversations.
+    """
+    if not user.db_record:
+        raise HTTPException(status_code=500, detail="Database error")
+
+    try:
+        # Create share token directly without requiring saved conversation
+        import uuid
+        share_token = str(uuid.uuid4())
+
+        # Store the share record for this unsaved conversation
+        # The conversation data will be provided by the frontend via cache/store
+        success = await tg_repo.create_unsaved_conversation_share(
+            share_token=share_token,
+            telegram_user_id=user.db_record["id"],
+            conversation_id=conversation_id,
+            title=title,
+        )
+
+        if not success:
+            raise HTTPException(status_code=500, detail="Failed to create share")
+
+        # Get public TWA URL from environment
+        twa_public_url = os.getenv("TWA_PUBLIC_URL", "https://select-signature-lloyd-trails.trycloudflare.com/twa")
+        share_url = f"{twa_public_url}/share/{share_token}"
+
+        return {
+            "shareToken": share_token,
+            "shareUrl": share_url,
+        }
+    except Exception as e:
+        print(f"Error creating share: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to create share: {str(e)}")
+
+
 @router.post("/saved-conversations/{saved_conversation_id}/share", response_model=ShareConversationResponse)
 async def share_conversation(
     saved_conversation_id: str,
