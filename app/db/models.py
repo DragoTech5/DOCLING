@@ -270,8 +270,8 @@ TIER_LIMITS = {
         "monthly_queries": None,          # Legacy
         "max_saved_conversations": None,  # Unlimited saved conversations/chats
         "history_days": None,
-        "price_stars": 5777,              # ~$99.99 USD (approx)
-        "price_usd": 9999,                # In cents
+        "price_stars": 2298,              # ~$49.99 USD (approx)
+        "price_usd": 4999,                # In cents - $49.99
         "payment_method": "telegram_stars",
     },
     "enterprise": {
@@ -311,8 +311,8 @@ TIER_LIMITS = {
         "monthly_queries": None,
         "max_saved_conversations": None,
         "history_days": None,
-        "price_stars": 5777,
-        "price_usd": 9999,
+        "price_stars": 2298,              # ~$49.99 USD (approx)
+        "price_usd": 4999,                # In cents - $49.99 (aligned with unlimited)
         "payment_method": "telegram_stars",
     },
 }
