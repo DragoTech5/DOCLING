@@ -148,6 +148,55 @@ export default function SharePage() {
 
   return (
     <div className="flex flex-col h-screen bg-tg-bg">
+      {/* Promotional Banner */}
+      <div
+        onClick={() => {
+          hapticFeedback('light')
+          // @ts-ignore - openLink is valid Telegram API method
+          window.Telegram?.WebApp?.openLink('https://web.telegram.org/k/#@AkashaAIHub_bot')
+        }}
+        style={{
+          background: 'linear-gradient(135deg, rgba(0, 20, 40, 0.95) 0%, rgba(10, 35, 55, 0.95) 100%)',
+          borderBottom: '1px solid rgba(6, 182, 212, 0.3)',
+          padding: '12px 16px',
+          cursor: 'pointer',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: '12px',
+          zIndex: 50,
+        }}
+        className="hover:bg-opacity-90 transition-all"
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1 }}>
+          <span style={{ fontSize: '20px' }}>🚀</span>
+          <div style={{ minWidth: 0 }}>
+            <p style={{
+              color: '#06B6D4',
+              margin: '0 0 2px 0',
+              fontSize: '13px',
+              fontWeight: '600',
+              textOverflow: 'ellipsis',
+              overflow: 'hidden',
+              whiteSpace: 'nowrap'
+            }}>
+              Join Akasha AI on Telegram
+            </p>
+            <p style={{
+              color: '#9CA3AF',
+              margin: 0,
+              fontSize: '11px',
+              textOverflow: 'ellipsis',
+              overflow: 'hidden',
+              whiteSpace: 'nowrap'
+            }}>
+              Access unlimited knowledge now
+            </p>
+          </div>
+        </div>
+        <span style={{ color: '#06B6D4', fontSize: '18px', flexShrink: 0 }}>→</span>
+      </div>
+
       {/* Header */}
       <header className="sticky top-0 z-10 bg-tg-header border-b border-tg-hint/20 px-4 py-3">
         <div className="flex items-center gap-3">
