@@ -250,18 +250,18 @@ TIER_LIMITS = {
         "monthly_queries": 25,            # Legacy
         "max_saved_conversations": None,  # MVP v1: unlimited saves
         "history_days": 90,
-        "price_stars": 680,               # ~$14.99 USD (approx)
-        "price_usd": 1499,                # In cents
+        "price_stars": 430,               # ~$9.99 USD (approx)
+        "price_usd": 999,                 # In cents - $9.99
         "payment_method": "telegram_stars",
     },
     "pro": {
         "max_pdfs": None,                 # MVP v1: doc selection not implemented
-        "daily_queries": 100,             # MVP v1: 100 questions per day
-        "monthly_queries": 100,           # Legacy
+        "daily_queries": 60,              # MVP v1: 60 questions per day
+        "monthly_queries": 60,            # Legacy
         "max_saved_conversations": None,  # MVP v1: unlimited saves
         "history_days": 365,
-        "price_stars": 1360,              # ~$29.99 USD (approx)
-        "price_usd": 2999,                # In cents
+        "price_stars": 860,               # ~$19.99 USD (approx)
+        "price_usd": 1999,                # In cents - $19.99
         "payment_method": "telegram_stars",
     },
     "unlimited": {

@@ -34,36 +34,31 @@ async def create_dodo_checkout(
     user: Annotated[TelegramUser, Depends(get_current_telegram_user)],
 ):
     """
-    Create Dodo checkout session for Researcher or Unlimited tier.
+    Create Dodo checkout session for any paid tier.
 
-    Returns checkout URL for user to complete payment.
-    Scholar tier should use Telegram Stars instead.
+    Returns checkout URL for user to complete payment via credit card.
 
     Query Parameters:
-        tier: Subscription tier (researcher or unlimited)
+        tier: Subscription tier (starter, pro, unlimited, etc.)
 
     Returns:
         {
             "checkout_url": "https://checkout.dodopayments.com/...",
             "expires_at": "ISO-8601 timestamp",
-            "tier": "researcher",
-            "amount_usd": 39.00
+            "tier": "starter",
+            "amount_usd": 9.99
         }
     """
-    # Validate tier
-    if tier not in ["researcher", "unlimited"]:
-        raise HTTPException(
-            status_code=400, detail="Dodo payments only for Researcher/Unlimited tiers"
-        )
-
+    # Validate tier exists and is not free
     tier_config = TIER_LIMITS.get(tier)
     if not tier_config:
         raise HTTPException(status_code=400, detail="Invalid tier")
 
-    if tier_config.get("payment_method") != "dodo":
+    # Only allow paid tiers (free tier has price_usd = 0)
+    if tier_config.get("price_usd", 0) == 0:
         raise HTTPException(
             status_code=400,
-            detail=f"Tier {tier} should use {tier_config['payment_method']} payment",
+            detail="Free tier does not require payment",
         )
 
     amount_usd = tier_config["price_usd"]  # In cents
