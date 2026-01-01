@@ -1479,7 +1479,7 @@ async def create_subscription_invoice(
     if not result.get("ok"):
         raise HTTPException(status_code=500, detail=f"Failed to create invoice: {result}")
 
-    return {"invoice_url": result["result"]}
+    return {"invoiceUrl": result["result"]}
 
 
 @router.post("/purchase-tokens")
@@ -1523,7 +1523,7 @@ async def purchase_token_bundle(
     if not result.get("ok"):
         raise HTTPException(status_code=500, detail=f"Failed to create invoice: {result}")
 
-    return {"invoice_url": result["result"]}
+    return {"invoiceUrl": result["result"]}
 
 
 # ============================================================================

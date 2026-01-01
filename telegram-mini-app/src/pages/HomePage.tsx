@@ -15,11 +15,11 @@ export default function HomePage() {
     if (tier === 'starter') return { name: 'Starter', dailyQueries: 33, selections: 6 }
     if (tier === 'pro') return { name: 'Pro', dailyQueries: 66, selections: 15 }
     if (tier === 'unlimited' || tier === 'enterprise') return { name: 'Unlimited', dailyQueries: '∞', selections: '∞' }
-    return { name: 'Free', dailyQueries: 9, selections: 1 }
+    return { name: 'Free', dailyQueries: 3, selections: 1 }
   }
 
   const tierInfo = getTierInfo()
-  const queriesRemaining = profile?.queriesRemaining ?? 9
+  const queriesRemaining = profile?.queriesRemaining ?? (typeof tierInfo.dailyQueries === 'number' ? tierInfo.dailyQueries : 3)
   const questionsUsedToday = (tierInfo.dailyQueries === '∞' ? 0 : (Number(tierInfo.dailyQueries) - queriesRemaining))
 
   return (
