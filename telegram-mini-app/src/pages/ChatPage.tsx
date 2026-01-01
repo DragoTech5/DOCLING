@@ -673,14 +673,11 @@ export default function ChatPage() {
       const url = data.shareUrl
       setShareUrl(url)
 
-      // Open share modal to display the share link
-      setShowShareModal(true)
-
-      // Auto-copy to clipboard
+      // Auto-copy to clipboard (no modal, just notification)
       navigator.clipboard.writeText(url).then(() => {
         console.log('✅ Share link copied to clipboard:', url)
         hapticFeedback('success')
-        // Show notification
+        // Show temporary notification
         setShareCopiedNotification(true)
         // Hide notification after 3 seconds
         setTimeout(() => setShareCopiedNotification(false), 3000)
