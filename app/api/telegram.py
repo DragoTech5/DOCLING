@@ -1180,12 +1180,12 @@ async def stream_chat_message(
 @router.post("/saved-conversations", response_model=SavedConversationResponse)
 async def save_conversation(
     request: SaveConversationRequest,
-    user: TelegramUser = Depends(require_telegram_tier("starter")),
+    user: TelegramUser = Depends(get_current_telegram_user),
 ):
     """
     Save current conversation with selected documents.
 
-    Requires Starter tier or higher (Free tier cannot save conversations).
+    Available for all users including free tier.
     """
     if not user.db_record:
         raise HTTPException(status_code=500, detail="Database error")
@@ -1196,11 +1196,9 @@ async def save_conversation(
     max_saved = tier_config.get("max_saved_conversations", 0)
 
     # None or negative means unlimited, 0 means not allowed
+    # For free tier, we still allow 1 saved conversation for sharing purposes
     if max_saved == 0:
-        raise HTTPException(
-            status_code=403,
-            detail="Your tier does not support saved conversations. Upgrade to Starter."
-        )
+        max_saved = 1  # Allow free tier 1 saved conversation for sharing
 
     # Check quota (skip if unlimited, i.e., None or negative)
     if max_saved is not None and max_saved > 0:
