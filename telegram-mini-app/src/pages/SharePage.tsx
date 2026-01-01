@@ -148,7 +148,7 @@ export default function SharePage() {
 
   return (
     <div className="flex flex-col h-screen bg-tg-bg">
-      {/* Promotional Banner - Curiosity-Driven */}
+      {/* Promotional Banner - Logo + Text Layout */}
       <div
         onClick={() => {
           hapticFeedback('light')
@@ -158,13 +158,13 @@ export default function SharePage() {
         style={{
           background: 'linear-gradient(135deg, rgba(0, 12, 25, 0.98) 0%, rgba(8, 28, 48, 0.98) 50%, rgba(0, 20, 40, 0.98) 100%)',
           borderBottom: '3px solid rgba(6, 182, 212, 0.5)',
-          padding: '16px 14px',
+          padding: '12px 12px',
           cursor: 'pointer',
           display: 'flex',
-          flexDirection: 'column',
+          flexDirection: 'row',
           alignItems: 'center',
-          justifyContent: 'center',
-          gap: '10px',
+          justifyContent: 'flex-start',
+          gap: '12px',
           zIndex: 50,
           position: 'relative',
           overflow: 'hidden',
@@ -182,92 +182,126 @@ export default function SharePage() {
           pointerEvents: 'none',
         }} />
 
-        {/* Main Headline - Curiosity Gap */}
-        <div style={{ position: 'relative', zIndex: 1, textAlign: 'center', width: '100%' }}>
-          <p style={{
-            color: '#EF4444',
-            margin: '0 0 4px 0',
-            fontSize: '10px',
-            fontWeight: '800',
-            letterSpacing: '1.5px',
-            textTransform: 'uppercase',
-            opacity: 0.9,
-          }}>
-            ⚡ THEY DON'T WANT YOU HERE
-          </p>
-          <p style={{
-            color: '#06B6D4',
-            margin: 0,
-            fontSize: '15px',
-            fontWeight: '900',
-            lineHeight: '1.2',
-            letterSpacing: '0.3px',
-          }}>
-            AKASHA AI — The Hidden Knowledge
-          </p>
-          <p style={{
-            color: '#A78BFA',
-            margin: '2px 0 0 0',
-            fontSize: '11px',
-            fontWeight: '700',
-            letterSpacing: '0.8px',
-          }}>
-            ◆ UNCENSORED • UNFILTERED • FORBIDDEN ◆
-          </p>
-        </div>
-
-        {/* Curiosity Copy - Call to action */}
-        <p style={{
-          color: '#FCD34D',
-          margin: '4px 0 0 0',
-          fontSize: '9.5px',
-          fontWeight: '600',
-          lineHeight: '1.35',
-          textAlign: 'center',
-          maxWidth: '100%',
-        }}>
-          9,000+ Occult Wisdom, Conspiracies & Hidden Truths<br/>
-          <span style={{ color: '#D0D8E0', fontSize: '8.5px' }}>No gatekeepers. No algorithms burying truth. Chat with forbidden knowledge.</span>
-        </p>
-
-        {/* CTA with urgency */}
+        {/* Logo Container - Left Side */}
         <div style={{
+          flexShrink: 0,
+          position: 'relative',
+          zIndex: 1,
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          gap: '6px',
-          marginTop: '6px',
+          width: '50px',
+          height: '50px',
+          minWidth: '50px',
+        }}>
+          <img
+            src="/logo-new.png"
+            alt="Akasha AI"
+            style={{
+              maxHeight: '48px',
+              maxWidth: '48px',
+              width: 'auto',
+              height: 'auto',
+              objectFit: 'contain',
+              filter: 'drop-shadow(0 0 12px rgba(6, 182, 212, 0.4))',
+            }}
+          />
+        </div>
+
+        {/* Text Content Container - Right Side */}
+        <div style={{
+          flex: 1,
+          minWidth: 0,
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '4px',
           position: 'relative',
           zIndex: 1,
         }}>
-          <span style={{
-            color: '#06B6D4',
-            fontSize: '13px',
-            fontWeight: 'bold',
-            opacity: 1,
-            animation: 'pulse 2s infinite',
-          }}>
-            ✨
-          </span>
+          {/* Top Line: Brand + Status */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+            <p style={{
+              color: '#06B6D4',
+              margin: 0,
+              fontSize: '13px',
+              fontWeight: '900',
+              lineHeight: '1.1',
+              letterSpacing: '0.3px',
+            }}>
+              AKASHA AI — The Hidden Knowledge
+            </p>
+            <p style={{
+              color: '#A78BFA',
+              margin: 0,
+              fontSize: '10px',
+              fontWeight: '700',
+              letterSpacing: '0.7px',
+            }}>
+              ◆ UNCENSORED • UNFILTERED • FORBIDDEN ◆
+            </p>
+          </div>
+
+          {/* Main Message - Bigger */}
           <p style={{
             color: '#E0E7FF',
-            margin: 0,
-            fontSize: '10px',
+            margin: '2px 0 0 0',
+            fontSize: '11px',
             fontWeight: '700',
+            lineHeight: '1.4',
             letterSpacing: '0.3px',
           }}>
-            Join Thousands Awakened
+            No gatekeepers. No algorithms burying truth. Chat with forbidden knowledge.
           </p>
-          <span style={{
-            color: '#06B6D4',
-            fontSize: '13px',
-            fontWeight: 'bold',
-            opacity: 1,
-            animation: 'pulse 2s infinite',
+
+          {/* CTA - Join with pulsing animation */}
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'flex-start',
+            gap: '4px',
+            marginTop: '3px',
           }}>
-            ✨
-          </span>
+            <span style={{
+              color: '#06B6D4',
+              fontSize: '11px',
+              fontWeight: 'bold',
+              opacity: 1,
+              animation: 'pulse 2s infinite',
+            }}>
+              ✨
+            </span>
+            <p style={{
+              color: '#FCD34D',
+              margin: 0,
+              fontSize: '11px',
+              fontWeight: '800',
+              letterSpacing: '0.3px',
+            }}>
+              Join Thousands Awakened for Free
+            </p>
+            <span style={{
+              color: '#06B6D4',
+              fontSize: '11px',
+              fontWeight: 'bold',
+              opacity: 1,
+              animation: 'pulse 2s infinite',
+            }}>
+              ✨
+            </span>
+          </div>
         </div>
+
+        {/* Arrow indicator */}
+        <span style={{
+          color: '#06B6D4',
+          fontSize: '14px',
+          fontWeight: 'bold',
+          flexShrink: 0,
+          opacity: 0.8,
+          transition: 'opacity 0.2s ease',
+        }}>
+          →
+        </span>
 
         {/* Pulse animation */}
         <style>{`
