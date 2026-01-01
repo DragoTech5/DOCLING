@@ -65,10 +65,18 @@ export default function PricingPage() {
     const success = await subscribe(selectedTierForPayment, method)
 
     if (success) {
+      // For Telegram Stars: immediate success (payment already confirmed)
       await showAlert('Subscription activated! Enjoy your new plan.')
       setSelectedTierForPayment(null)
       navigate('/')
+    } else if (method === 'dodo') {
+      // For DODO: user is redirected to payment page, don't show success yet
+      // Webhook will handle subscription activation and redirect on success
+      setSelectedTierForPayment(null)
+      // Navigate back but don't show success - backend will notify via webhook
+      navigate('/')
     } else {
+      // Other payment methods failed
       setSelectedTierForPayment(null)
     }
   }

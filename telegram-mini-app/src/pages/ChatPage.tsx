@@ -669,6 +669,9 @@ export default function ChatPage() {
       const url = data.shareUrl
       setShareUrl(url)
 
+      // Open share modal to display the share link
+      setShowShareModal(true)
+
       // Auto-copy to clipboard
       navigator.clipboard.writeText(url).then(() => {
         console.log('✅ Share link copied to clipboard:', url)

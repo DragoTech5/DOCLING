@@ -54,15 +54,16 @@ export const useSubscriptionStore = create<SubscriptionState>((set) => ({
         const data = await response.json()
 
         // Open Dodo checkout in external link
-        hapticFeedback('success')
+        hapticFeedback('light')
         // Use @ts-ignore because openLink is a valid Telegram API method
         // @ts-ignore
         window.Telegram?.WebApp?.openLink(data.checkout_url)
 
         // Note: Return to this page via success/failure URLs handled by backend
         // User will be redirected to /payment-success or /payment-failure
+        // DO NOT return true here - wait for webhook to confirm payment
         set({ isProcessing: false, lastPaymentStatus: 'pending' })
-        return true
+        return false
       } else {
         // Telegram Stars flow (default for all payment methods)
         const result = await api.createSubscriptionInvoice(tier)
