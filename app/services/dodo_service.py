@@ -97,7 +97,7 @@ class DodoPaymentsService:
 
         try:
             response = requests.post(
-                f"{self.base_url}/api/checkout-sessions",
+                f"{self.base_url}/checkout/sessions",
                 json=payload,
                 headers=headers,
                 timeout=10,
