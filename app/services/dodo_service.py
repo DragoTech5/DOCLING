@@ -65,29 +65,24 @@ class DodoPaymentsService:
             raise Exception(f"Invalid tier '{tier}': no DODO product ID configured")
 
         payload = {
-            "cart": {
-                "items": [
-                    {
-                        "productId": product_id,
-                        "quantity": 1,
-                        "name": f"{tier.capitalize()} Subscription",
-                        "amount": amount_usd,  # In cents
-                    }
-                ]
-            },
+            "product_cart": [
+                {
+                    "product_id": product_id,
+                    "quantity": 1,
+                }
+            ],
             "customer": {
                 "email": customer_email,
-                "metadata": {
-                    "telegram_user_id": str(telegram_user_id),
-                    "tier": tier,
-                },
             },
-            "returnUrls": {
+            "metadata": {
+                "telegram_user_id": str(telegram_user_id),
+                "tier": tier,
+            },
+            "return_urls": {
                 "success": return_url_success,
                 "failure": return_url_failure,
                 "cancel": return_url_failure,
             },
-            "confirm": True,  # 15-minute session expiry for immediate payment
         }
 
         headers = {
@@ -97,7 +92,7 @@ class DodoPaymentsService:
 
         try:
             response = requests.post(
-                f"{self.base_url}/checkout/sessions",
+                f"{self.base_url}/checkouts",
                 json=payload,
                 headers=headers,
                 timeout=10,
@@ -111,13 +106,13 @@ class DodoPaymentsService:
             data = response.json()
 
             logger.info(
-                f"✅ Dodo checkout session created: {data.get('id')} for user {telegram_user_id}"
+                f"✅ Dodo checkout session created: {data.get('session_id')} for user {telegram_user_id}"
             )
 
             return {
-                "checkout_session_id": data["id"],
-                "checkout_url": data["data"]["checkoutUrl"],
-                "expires_at": data.get("expiresAt"),
+                "checkout_session_id": data["session_id"],
+                "checkout_url": data["checkout_url"],
+                "expires_at": data.get("expires_at"),
             }
 
         except requests.exceptions.RequestException as e:
