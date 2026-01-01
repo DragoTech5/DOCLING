@@ -935,7 +935,48 @@ async def chat_maglib(
     return ChatResponse(content=assistant_content, sources=sources)
 
 
-def _extract_cited_sources(response_text: str, all_sources: list[Source]) -> list[Source]:
+def _remove_invalid_citations(response_text: str, valid_source_count: int) -> str:
+    """
+    Remove or replace invalid citations in the response text.
+
+    If the response contains citations like [6] but only 5 sources exist,
+    remove those invalid citations to prevent source mismatch.
+
+    Args:
+        response_text: The LLM response text
+        valid_source_count: Number of valid sources (max citation number)
+
+    Returns:
+        Response text with invalid citations removed
+    """
+    import re
+
+    if valid_source_count == 0:
+        # Remove all citations if no sources
+        return re.sub(r'\s*\[\d+\]\s*', '', response_text)
+
+    # Find all citations
+    citation_pattern = r'\[(\d+)\]'
+    matches = list(re.finditer(citation_pattern, response_text))
+
+    # Process matches in reverse order to preserve positions
+    cleaned_text = response_text
+    for match in reversed(matches):
+        citation_num = int(match.group(1))
+        if citation_num > valid_source_count:
+            # Remove invalid citation (including surrounding spaces)
+            start, end = match.span()
+            # Try to remove surrounding spaces for cleaner output
+            if start > 0 and cleaned_text[start-1] == ' ':
+                start -= 1
+            if end < len(cleaned_text) and cleaned_text[end] == ' ':
+                end += 1
+            cleaned_text = cleaned_text[:start] + cleaned_text[end:]
+
+    return cleaned_text
+
+
+def _extract_cited_sources(response_text: str, all_sources: list[Source]) -> tuple[str, list[Source]]:
     """
     Extract only the sources that are actually cited in the response.
 
@@ -948,19 +989,20 @@ def _extract_cited_sources(response_text: str, all_sources: list[Source]) -> lis
     This function:
     1. Deduplicates sources by document title (preserving order)
     2. Parses the response text to find which citations are actually used (e.g., [1], [3], [7])
-    3. Returns ONLY the sources that are referenced in the response
+    3. Removes invalid citations from response text
+    4. Returns ONLY the sources that are referenced in the response
 
     Args:
         response_text: The LLM response text (parsed for citations)
         all_sources: List of all retrieved sources (possibly with duplicates for multi-chunk sources)
 
     Returns:
-        List of sources that are actually cited in the response, in citation order
+        Tuple of (cleaned_response_text, list of sources that are actually cited)
     """
     import re
 
     if not all_sources:
-        return []
+        return response_text, []
 
     # Step 1: Deduplicate sources by document title (case-insensitive)
     # Preserves order of first appearance
@@ -994,19 +1036,30 @@ def _extract_cited_sources(response_text: str, all_sources: list[Source]) -> lis
     # Step 3: Return only the sources that are cited
     # Citation numbers are 1-based, array indices are 0-based
     cited_sources = []
+    valid_citations = []
     for citation_num in cited_indices:
         source_index = citation_num - 1  # Convert 1-based to 0-based
         if 0 <= source_index < len(unique_sources):
             cited_sources.append(unique_sources[source_index])
+            valid_citations.append(citation_num)
+
+    # CRITICAL FIX: Remove invalid citations from response text
+    # If AI cited [6] but only 5 sources exist, clean that up
+    invalid_citations = [c for c in cited_indices if c > len(unique_sources) or c <= 0]
+    if invalid_citations:
+        logger.warning(f"[SOURCES] Found {len(invalid_citations)} invalid citations in response: {invalid_citations}. Max valid citation: {len(unique_sources)}")
+        cleaned_text = _remove_invalid_citations(response_text, len(unique_sources))
+    else:
+        cleaned_text = response_text
 
     # Fallback: if no valid citations found, return all unique sources
     # This prevents hallucinated sources by showing what was actually retrieved
     if not cited_sources and unique_sources:
         logger.warning(f"[SOURCES] No valid citations found in response (citations: {cited_indices}, sources: {len(unique_sources)}). Returning all retrieved sources as fallback.")
-        return unique_sources
+        return cleaned_text, unique_sources
 
-    logger.info(f"[SOURCES] Extracted {len(cited_sources)} cited sources from response with citations: {cited_indices}")
-    return cited_sources
+    logger.info(f"[SOURCES] Extracted {len(cited_sources)} cited sources from response with valid citations: {valid_citations}")
+    return cleaned_text, cited_sources
 
 
 async def telegram_chat_stream_maglib(
@@ -1193,7 +1246,8 @@ async def telegram_chat_stream_maglib(
         logger.info(f"[STREAM_MAGLIB] Finished reading OpenAI chunks, total_loop_iterations={total_loop_iterations}, chunks_yielded={chunk_count}, full_content_length={len(full_content)}")
 
         # Extract and deduplicate sources from all retrieved chunks
-        cited_sources = _extract_cited_sources(full_content, all_sources)
+        # CRITICAL FIX: _extract_cited_sources now returns (cleaned_text, cited_sources) tuple
+        full_content, cited_sources = _extract_cited_sources(full_content, all_sources)
 
         # Log sources for debugging with SOURCE-AWARE NUMBERING
         logger.info(f"[STREAM_MAGLIB] SOURCE-AWARE NUMBERING: {len(all_sources)} chunks from {len(cited_sources)} unique documents")
@@ -1391,7 +1445,8 @@ async def telegram_chat_stream_bibliothek(
                 yield json.dumps({"type": "content", "data": content}) + "\n"
 
         # Extract only cited sources and deduplicate
-        cited_sources = _extract_cited_sources(full_response, all_sources)
+        # CRITICAL FIX: _extract_cited_sources now returns (cleaned_text, cited_sources) tuple
+        full_response, cited_sources = _extract_cited_sources(full_response, all_sources)
 
         # Send only the cited, deduplicated sources
         sources_data = [
