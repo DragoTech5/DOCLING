@@ -989,9 +989,9 @@ export default function ChatPage() {
                 }
               </p>
             </div>
-            {/* Save and Share buttons - only show if there are messages and user is not on free tier */}
+            {/* Save and Share buttons - only show if there are messages */}
             <div className="flex-shrink-0 flex gap-2">
-              {currentConversation?.messages && currentConversation.messages.length > 0 && profile?.tier !== 'free' && (
+              {currentConversation?.messages && currentConversation.messages.length > 0 && (
                 <>
                   <button
                     onClick={async () => {
