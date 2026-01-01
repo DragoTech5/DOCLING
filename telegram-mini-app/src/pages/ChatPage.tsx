@@ -548,11 +548,13 @@ export default function ChatPage() {
       setIsSavingConversation(true)
       setSaveError(null)
 
+      const initData = window.Telegram?.WebApp?.initData || ''
+
       const response = await fetch('/api/telegram/saved-conversations', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'X-Telegram-Init-Data': `user=${profile?.telegramId}`,
+          'X-Telegram-Init-Data': initData,
         },
         body: JSON.stringify({
           conversationId: currentConversation.id,
@@ -613,6 +615,8 @@ export default function ChatPage() {
       setShareError(null)
       setShareUrl(null)
 
+      const initData = window.Telegram?.WebApp?.initData || ''
+
       // If conversation is unsaved (starts with 'new-'), save it first
       let conversationIdToShare = currentConversation.id
       if (currentConversation.id.startsWith('new-')) {
@@ -622,7 +626,7 @@ export default function ChatPage() {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'X-Telegram-Init-Data': `user=${profile?.telegramId}`,
+            'X-Telegram-Init-Data': initData,
           },
           body: JSON.stringify({
             conversationId: currentConversation.id,
@@ -651,7 +655,7 @@ export default function ChatPage() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'X-Telegram-Init-Data': `user=${profile?.telegramId}`,
+          'X-Telegram-Init-Data': initData,
         },
       })
 
@@ -1002,12 +1006,13 @@ export default function ChatPage() {
                         setIsSavingConversation(true)
                         setSaveError(null)
                         try {
+                          const initData = window.Telegram?.WebApp?.initData || ''
                           const title = currentConversation.messages[0]?.content?.slice(0, 50) + '...' || 'Untitled Chat'
                           const response = await fetch('/api/telegram/saved-conversations', {
                             method: 'POST',
                             headers: {
                               'Content-Type': 'application/json',
-                              'X-Telegram-Init-Data': `user=${profile?.telegramId}`,
+                              'X-Telegram-Init-Data': initData,
                             },
                             body: JSON.stringify({
                               conversationId: currentConversation.id,
