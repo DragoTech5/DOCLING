@@ -16,6 +16,13 @@ logger = logging.getLogger(__name__)
 class DodoPaymentsService:
     """Service for interacting with Dodo Payments API."""
 
+    # DODO Product ID mapping for subscription tiers
+    PRODUCT_IDS = {
+        "starter": "pdt_0NVHJtzTmrsZrJ0yfT38v",
+        "pro": "pdt_0NVHPtTYToUhm5ZXE39S1",
+        "unlimited": "pdt_0NVHQAS9r1ieO5bltXqQr",
+    }
+
     def __init__(self):
         self.api_key = os.getenv("DODO_API_KEY")
         self.webhook_secret = os.getenv("DODO_WEBHOOK_SECRET")
@@ -52,11 +59,16 @@ class DodoPaymentsService:
         Raises:
             Exception: If Dodo API returns an error
         """
+        # Get DODO product ID for this tier
+        product_id = self.PRODUCT_IDS.get(tier)
+        if not product_id:
+            raise Exception(f"Invalid tier '{tier}': no DODO product ID configured")
+
         payload = {
             "cart": {
                 "items": [
                     {
-                        "productId": f"tier_{tier}",
+                        "productId": product_id,
                         "quantity": 1,
                         "name": f"{tier.capitalize()} Subscription",
                         "amount": amount_usd,  # In cents
