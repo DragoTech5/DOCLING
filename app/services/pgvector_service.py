@@ -709,8 +709,11 @@ async def _hybrid_search_single(
 
         logger.info(f"[HYBRID_SEARCH] Returned {len(rows)} rows from database")
 
-        return [
-            HybridSearchResult(
+        # Convert to HybridSearchResult objects immediately (eager evaluation)
+        # This ensures the database connection is fully consumed before returning
+        results = []
+        for row in rows:
+            results.append(HybridSearchResult(
                 chunk_id=row["chunk_id"],
                 document_id=row["document_id"],
                 content=row["content"],
@@ -721,9 +724,8 @@ async def _hybrid_search_single(
                 document_title=row["document_title"],
                 document_author=None,
                 document_filename=row["document_filename"],
-            )
-            for row in rows
-        ]
+            ))
+        return results
 
 
 async def _hybrid_search_per_document(
