@@ -144,7 +144,14 @@ async def retrieve_with_hyde(
         max_results=n_results,
     )
 
-    logger.debug(f"HyDE retrieval: {len(results_original)} + {len(results_hyde)} -> {len(merged)}")
+    logger.info(f"[HYDE_RETRIEVAL] Original: {len(results_original)}, HyDE: {len(results_hyde)}, Merged: {len(merged)}, document_ids={document_ids}")
+
+    # DEBUG: Log first chunk text if available
+    if merged:
+        first_chunk_text = merged[0].get("text", "")[:100]
+        logger.debug(f"[HYDE_RETRIEVAL] First merged chunk text: {first_chunk_text}")
+    else:
+        logger.warning(f"[HYDE_RETRIEVAL] NO CHUNKS AFTER MERGE! original={len(results_original)}, hyde={len(results_hyde)}")
 
     return merged
 
