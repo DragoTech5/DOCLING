@@ -30,7 +30,7 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-# Install system dependencies for Python packages (PostgreSQL client libs, SSH, build tools, ML libraries)
+# Install system dependencies for Python packages (PostgreSQL client libs, SSH, build tools, ML libraries, SMB)
 # Use single RUN command with proper apt caching to avoid timeouts
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
@@ -43,6 +43,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libfreetype6-dev \
     libssl-dev \
     libffi-dev \
+    cifs-utils \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy Python requirements and install dependencies
@@ -57,6 +58,10 @@ COPY .env.railway .env
 # Copy built frontend from stage 1
 COPY --from=frontend-builder /app/telegram-mini-app/dist ./app/static/twa
 
+# Copy entrypoint script for SMB mount support
+COPY docker-entrypoint.sh /docker-entrypoint.sh
+RUN chmod +x /docker-entrypoint.sh
+
 # Expose port
 EXPOSE 8200
 
@@ -66,4 +71,5 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
 
 # PORT is set by Railway deployment platform
 # HOST defaults to 0.0.0.0
-ENTRYPOINT sh -c "uvicorn app.main:app --host \${HOST:-0.0.0.0} --port \${PORT:-8200}"
+# SMB_MOUNT_ENABLED controls whether to mount NAS data via SMB (for persistent storage)
+ENTRYPOINT ["/docker-entrypoint.sh"]
