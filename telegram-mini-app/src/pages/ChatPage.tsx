@@ -665,6 +665,7 @@ export default function ChatPage() {
   // Initialize from URL params on mount
   useEffect(() => {
     const docsParam = searchParams.get('docs')
+    console.log('🔍 URL params effect: docsParam =', docsParam)
 
     // Only handle docs param if no conversationId is provided
     // If conversationId exists, loadFullConversation will load the conversation's documents
@@ -677,10 +678,11 @@ export default function ChatPage() {
 
     // Parse docs from URL: ?docs=maglib:123,bibliothek:456 or ?docs=all
     if (docsParam) {
+      console.log('📝 Found docs parameter:', docsParam)
       if (docsParam === 'all') {
         // Chat with all documents - don't set specific IDs
         setChatWithAll(true)
-        setSelectedPdfIds([]) // Empty means all
+        // CRITICAL: Only call setCurrentConversation, which now atomically updates both states
         setCurrentConversation({
           id: `new-${Date.now()}`,
           title: 'Chat with All Documents',
@@ -691,9 +693,12 @@ export default function ChatPage() {
         })
       } else {
         const docIds = docsParam.split(',').filter(Boolean)
+        console.log('✅ Parsed docIds:', docIds)
         if (docIds.length > 0) {
-          setSelectedPdfIds(docIds)
-          // Create a new empty conversation for this chat
+          console.log('📌 Setting selectedPdfIds to:', docIds)
+          // CRITICAL: Only call setCurrentConversation, which now atomically updates both
+          // currentConversation and selectedPdfIds in a single state update
+          // This ensures proper state synchronization when switching documents
           setCurrentConversation({
             id: `new-${Date.now()}`,
             title: 'New Chat',
@@ -707,7 +712,7 @@ export default function ChatPage() {
     } else {
       // Default to Chat with All Documents when no docs param provided
       setChatWithAll(true)
-      setSelectedPdfIds([])
+      // CRITICAL: Only call setCurrentConversation, which now atomically updates both states
       setCurrentConversation({
         id: `new-${Date.now()}`,
         title: 'Chat with All Documents',

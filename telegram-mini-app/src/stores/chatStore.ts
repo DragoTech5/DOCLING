@@ -1,7 +1,6 @@
 import { create } from 'zustand'
 import type { Conversation, Message, PDF, Source } from '@/types'
 import { api } from '@/lib/api'
-import { ENABLE_MULTI_DOCUMENT_SELECTION } from '@/config/features'
 
 interface ChatState {
   // State
@@ -64,16 +63,13 @@ export const useChatStore = create<ChatState>((set, get) => ({
           cover_url: doc.cover_url, // Include cover URL from response
         }))
 
-        // Auto-select all documents when multi-doc selection is disabled
-        const selectedPdfIds = !ENABLE_MULTI_DOCUMENT_SELECTION
-          ? pdfs.map((p: any) => p.id)
-          : []
-
+        // Don't auto-select PDFs here - let the URL params effect handle selection
+        // This allows ?docs=maglib:123 to work correctly
         set({
-          availablePdfs: pdfs,
-          selectedPdfIds
+          availablePdfs: pdfs
+          // Don't touch selectedPdfIds - let URL params effect set it
         })
-        console.log(`✅ Loaded ${pdfs.length} documents for chat${!ENABLE_MULTI_DOCUMENT_SELECTION ? ' (all auto-selected)' : ''}`)
+        console.log(`✅ Loaded ${pdfs.length} documents for chat`)
       } else {
         console.warn('⚠️ API response missing success or documents:', result)
       }
@@ -142,10 +138,12 @@ export const useChatStore = create<ChatState>((set, get) => ({
   },
 
   setCurrentConversation: (conversation) => {
-    set({ currentConversation: conversation })
-    if (conversation) {
-      set({ selectedPdfIds: conversation.pdfIds })
-    }
+    // CRITICAL: Update both currentConversation and selectedPdfIds in a single atomic update
+    // This prevents race conditions when switching between documents
+    set(state => ({
+      currentConversation: conversation,
+      selectedPdfIds: conversation ? conversation.pdfIds : state.selectedPdfIds,
+    }))
   },
 
   createConversation: async () => {
