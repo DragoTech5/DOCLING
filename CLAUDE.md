@@ -5,9 +5,20 @@
 - **Start Command**: `uvicorn app.main:app --host 0.0.0.0 --port 8200 --reload`
 - If port 8200 is occupied: `pkill -f "uvicorn app.main" && sleep 2` then restart
 
-## Current Work - PDF Download + Single Book Chat Feature ✅ COMPLETE
-- **Branch**: `feature/railway-nas-hybrid-deployment` - Telegram Mini App with PDF downloads
-- **Status**: ✅ All 14 tasks implemented and deployed
+## Current Work - Infrastructure Fixes + E2E Testing ✅ COMPLETE
+- **Branch**: `feature/railway-nas-hybrid-deployment` - Telegram Mini App with NAS persistence
+- **Status**: ✅ SMB mount persistence + Browser E2E testing complete
+
+### Latest E2E Test Results (2026-01-02)
+- ✅ **HomePage**: Tier display, saved conversations (5), usage stats
+- ✅ **ArchivePage**: 9,078 documents, pagination (1/303), A-Z navigation, collection indicators (MAG-LIB/BIBLIOTHEK)
+- ✅ **ChatPage**: Message sending, input/output working, Save/Share buttons visible
+- ✅ **HistoryPage**: Saved conversations loading and accessible
+- ✅ **PricingPage**: All 4 tiers (Free/Starter/Pro/Unlimited), correct pricing ($9.99/$19.99/$49.99), payment options
+- ✅ **SharePage**: Proper error handling for invalid/expired share tokens
+- ✅ **Mobile Responsive**: iPhone 13 portrait (390x664) layout working correctly
+- ✅ **Navigation**: All pages accessible via bottom navigation buttons
+- ⚠️ **Console**: 23 minor 404 errors for static resources (images/fonts) - does not affect functionality
   - Task 1-10: Core implementation (favicon, tiers, endpoints, UI)
   - Task 11: ✅ Profile response & quota check middleware
   - Task 12: ✅ Download analytics tracking
