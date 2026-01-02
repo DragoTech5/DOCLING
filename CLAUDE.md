@@ -5,13 +5,14 @@
 - **Start Command**: `uvicorn app.main:app --host 0.0.0.0 --port 8200 --reload`
 - If port 8200 is occupied: `pkill -f "uvicorn app.main" && sleep 2` then restart
 
-## Current Work
-- **Branch**: `feature/knowledge-archive-twa` - Telegram Mini App for combined knowledge archive
-- **Active Bug**: Multi-document sources only showing 1 source when 2+ documents selected
-  - Issue Location: `/app/services/chat_service.py:938-1003` - `_extract_cited_sources()` function
-  - Root Cause: Function filters sources by explicit `[1]`, `[2]` citations; drops sources without explicit citations
-  - Status: Root cause identified, fix not yet implemented
-  - Test Status: Needs isolated unit testing + multi-doc browser testing
+## Current Work - PDF Download + Single Book Chat Feature ✅ COMPLETE
+- **Branch**: `feature/railway-nas-hybrid-deployment` - Telegram Mini App with PDF downloads
+- **Status**: ✅ All 14 tasks implemented and deployed
+  - Task 1-10: Core implementation (favicon, tiers, endpoints, UI)
+  - Task 11: ✅ Profile response & quota check middleware
+  - Task 12: ✅ Download analytics tracking
+  - Task 13: ✅ Integration testing (all features verified)
+  - Task 14: ✅ Documentation & deployment
 
 ## Tech Stack
 - **Backend**: FastAPI (port 8200)
@@ -22,13 +23,36 @@
 - **Embeddings**: BAAI/bge-large-en-v1.5 (1024 dimensions)
 - **Chat**: OpenAI API (GPT-4/Claude via API)
 
+## New Features - PDF Downloads & Single Book Chat
+
+### PDF Downloads
+- **Endpoint**: `GET /api/telegram/download/{document_id}`
+  - Format: `maglib:ID` or `bibliothek:ID`
+  - Returns FileResponse with user-friendly filename
+  - Enforces daily quota per tier before streaming
+  - Returns 429 when quota exhausted
+  - Logs all downloads (success/failure) with analytics
+- **UI**: Download button in document modal (Archive page)
+- **Quota**: Tier-based daily limits with auto-reset at UTC midnight
+  - Free: 1 PDF/day
+  - Starter: 3 PDFs/day
+  - Pro: 12 PDFs/day
+  - Unlimited/Enterprise: Unlimited
+
+### Single Book Chat
+- **Feature**: Click "Chat with This Book" button in modal
+- **Behavior**: Creates new conversation with only that document
+- **Implementation**: Uses existing `/conversations/create` with single pdf_id
+
 ## Critical File Locations
 - **Mini App**: `/home/kanat/DEVELOPER/N8N-SERVERS/DOCLING/telegram-mini-app/`
-- **Backend API**: `/app/api/telegram.py`
-- **Chat Service**: `/app/services/chat_service.py`
+- **Backend API**: `/app/api/telegram.py` (lines 695-835 for download endpoint)
+- **Repository**: `/app/db/telegram_repository.py` (quota management functions)
+- **Database Models**: `/app/db/models.py` (pdf_downloads table + analytics fields)
 - **Frontend Store**: `/telegram-mini-app/src/stores/chatStore.ts`
-- **Archive Page**: `/telegram-mini-app/src/pages/ArchivePage.tsx`
+- **Archive Page**: `/telegram-mini-app/src/pages/ArchivePage.tsx` (download button)
 - **Chat Page**: `/telegram-mini-app/src/pages/ChatPage.tsx`
+- **Pricing Page**: `/telegram-mini-app/src/pages/PricingPage.tsx` (displays download limits)
 
 ## Testing & Deployment
 
@@ -46,11 +70,70 @@ uvicorn app.main:app --host 0.0.0.0 --port 8200 --reload > uvicorn.log 2>&1 &
 sleep 3
 ```
 
-### Browser Testing Protocol
-- **Always test in actual Telegram Mini App** (not localhost only)
-- Use Chrome DevTools Protocol (CDP) on port 9222 for automation
-- Use WebSocket connections to `http://127.0.0.1:9222/json` for browser control
-- Take screenshots to document test results
+### 🔬 Universal Browser E2E Testing Protocol
+
+**Reference Doc:** `UNIVERSAL_BROWSER_TESTING_PLAYWRIGHT_MCP.md` in Archon KB
+
+#### Success Criteria
+- ✅ Tested in actual debug browser on port 9222
+- ✅ Navigated through webapp like a human user
+- ✅ Feature works end-to-end in real browser with session state
+
+#### 3-Phase Testing Strategy
+
+**Phase 1: Code Validation (Fastest)**
+- No browser needed
+- Check syntax, imports, API endpoints
+- Duration: Seconds to 1 minute
+
+**Phase 2: Playwright MCP Testing (Fast Iteration)**
+- Use Playwright MCP tools for quick UI testing
+- Create new browser instances per test
+- Good for rapid iteration
+- Duration: 30 seconds to 2 minutes
+
+**Phase 3: Debug Browser Verification (Final Truth - REQUIRED)**
+- Connect to Chrome debug browser on port 9222
+- Use existing session state (cookies, localStorage, auth)
+- Test with real user login/state
+- Only way to verify actual UX
+- Duration: 1-3 minutes
+
+#### Browser Launch (Automatic)
+Browser was started with:
+```bash
+google-chrome --remote-debugging-port=9222 --user-data-dir=/tmp/chrome-debug
+```
+
+#### CDP Connection (Node.js)
+```javascript
+const { chromium } = require('playwright');
+
+async function testWithDebugBrowser() {
+    // Connect to debug browser (preserves session)
+    const browser = await chromium.connectOverCDP('http://localhost:9222');
+    const page = browser.pages()[0]; // Use first/active tab
+
+    // Now test with real session state
+    await page.goto('https://your-app-url/chat');
+    // Test your feature here...
+
+    await browser.close();
+}
+```
+
+#### Available Tools
+- **Playwright MCP**: Quick testing, new instances
+- **Browser MCP**: Alternative automation
+- **CDP Direct**: Maximum control via WebSocket
+
+#### Playwright MCP Quick Reference
+- `mcp__playwright__playwright_navigate` - Navigate to URL
+- `mcp__playwright__playwright_click` - Click element (CSS selector)
+- `mcp__playwright__playwright_fill` - Fill input field
+- `mcp__playwright__playwright_screenshot` - Capture screenshot
+- `mcp__playwright__playwright_get_visible_text` - Get page text
+- `mcp__playwright__playwright_console_logs` - Get console output
 
 ### Known HTTP 401 Error
 - Caused by missing rebuild of dist files or server restart
@@ -86,11 +169,12 @@ echo "New URL: $TUNNEL_URL"
 - Fixes: Frontend loads conversation after first message, backend fetches history
 - Status: VERIFIED WORKING
 
-### Multi-Document Sources ❌ NOT YET FIXED
-- Issue: When selecting 2+ documents, AI response only shows 1 source
-- Root Cause: `_extract_cited_sources()` filters by explicit `[1]`, `[2]` citations
-- Fix Status: Identified but not yet implemented
-- Next Steps: Unit test + browser testing with >2 documents
+### PDF Download Quota Management ✅ IMPLEMENTED
+- Auto-reset at UTC midnight (no manual reset needed)
+- Returns 429 if quota exhausted
+- Analytics tracked for all downloads (success/failure)
+- Response time measured for performance analysis
+- Status: FULLY OPERATIONAL
 
 ## Project Memory Archives
 - **Full History**: `docs/PROJECT_MEMORY_ARCHIVE.md` - Complete historical context
@@ -103,8 +187,24 @@ echo "New URL: $TUNNEL_URL"
 ## Quick References
 - **Archon TWA Project ID**: `1da841e4-785f-49c4-91d4-e4e451b78dbb`
 - **Archon PDF Processing Project ID**: `758be85c-84fc-46b8-8441-f7009276ae0d`
-- **Subscription Tiers** (Actual Implementation):
-  - Free: 3 q/day, $0
-  - Starter: 25 q/day, $9.99/month (430 Stars)
-  - Pro: 60 q/day, $19.99/month (860 Stars)
-  - Unlimited: Unlimited q/day, $49.99/month (2298 Stars)
+- **Subscription Tiers** (Queries + PDF Downloads):
+  - Free: 6 q/day + 1 PDF/day, $0
+  - Starter: 25 q/day + 3 PDFs/day, $9.99/month (430 Stars)
+  - Pro: 60 q/day + 12 PDFs/day, $19.99/month (860 Stars)
+  - Unlimited: ∞ q/day + ∞ PDFs/day, $49.99/month (2298 Stars)
+  - Enterprise: ∞ q/day + ∞ PDFs/day, $0 (dev whitelist only)
+
+## New API Endpoints (PDF Download Feature)
+- `GET /api/telegram/profile` - Updated with download quota fields
+  - Returns: `downloadsUsed`, `downloadsRemaining`, `downloadQuotaResets`, `dailyDownloadLimit`
+- `GET /api/telegram/download/{document_id}` - Download PDF with quota enforcement
+  - Status 429: Quota exhausted
+  - Status 404: Document or file not found
+  - Status 200: File streaming with analytics logging
+
+## Database Changes
+- **New Table**: `pdf_downloads` - Download history for analytics
+  - Fields: telegram_user_id, document_id, document_title, collection, file_size_mb, ip_address, user_tier, response_time_ms, success, error_type, downloaded_at
+  - Indexes: user_id, document_id, downloaded_at
+- **Altered Tables**: `telegram_users` - Added download quota fields
+  - Fields: downloads_used, downloads_remaining, download_quota_resets_at
