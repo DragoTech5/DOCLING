@@ -12,14 +12,19 @@ Handles:
 from __future__ import annotations
 
 import json
+import logging
 import os
+import pathlib
 from datetime import datetime, timedelta
 from typing import Annotated, Optional
 
 import httpx
+import psycopg2
 from fastapi import APIRouter, HTTPException, Depends, Query, Request
-from fastapi.responses import StreamingResponse, JSONResponse
+from fastapi.responses import StreamingResponse, JSONResponse, FileResponse
 from pydantic import BaseModel, Field
+
+logger = logging.getLogger(__name__)
 
 from app.db import telegram_repository as tg_repo
 from app.db.models import TIER_LIMITS
@@ -73,6 +78,10 @@ class AuthResponse(BaseModel):
     tier: str
     queriesUsed: int
     queriesRemaining: int
+    downloadsUsed: int = 0
+    downloadsRemaining: int = 1
+    downloadQuotaResets: Optional[str] = None
+    dailyDownloadLimit: int = 1
     subscriptionEndsAt: Optional[str]
     createdAt: str
 
@@ -218,17 +227,35 @@ async def authenticate(user: TelegramUser = Depends(get_current_telegram_user)):
 
 @router.get("/profile", response_model=AuthResponse)
 async def get_profile(user: TelegramUser = Depends(get_current_telegram_user)):
-    """Get current user profile."""
+    """Get current user profile with download quota."""
     if not user.db_record:
         raise HTTPException(status_code=500, detail="Database error")
+
+    # Get download quota remaining and tier limit
+    downloads_remaining = await tg_repo.get_download_quota_remaining(user.id)
+    tier = user.db_record["tier"]
+    tier_limits = TIER_LIMITS.get(tier, TIER_LIMITS["free"])
+    daily_download_limit = tier_limits.get("daily_downloads", 1)
+
+    # For unlimited tiers, return None for both limits and a high number for remaining
+    if daily_download_limit is None:
+        downloads_remaining_display = 999999  # High number for unlimited
+        daily_download_limit_display = None
+    else:
+        downloads_remaining_display = max(0, downloads_remaining)  # 0 minimum for exhausted quota
+        daily_download_limit_display = daily_download_limit
 
     return {
         "telegramId": user.db_record["telegram_id"],
         "firstName": user.db_record["first_name"],
         "username": user.db_record.get("username"),
-        "tier": user.db_record["tier"],
+        "tier": tier,
         "queriesUsed": user.db_record["queries_used"],
         "queriesRemaining": user.db_record["queries_remaining"],
+        "downloadsUsed": user.db_record.get("downloads_used", 0),
+        "downloadsRemaining": downloads_remaining_display,
+        "downloadQuotaResets": user.db_record.get("download_quota_resets_at"),
+        "dailyDownloadLimit": daily_download_limit_display,
         "subscriptionEndsAt": user.db_record.get("subscription_ends_at"),
         "createdAt": user.db_record["created_at"],
     }
@@ -666,6 +693,175 @@ async def list_documents(
         page=page,
         per_page=per_page,
         has_more=(page * per_page) < total_count,
+    )
+
+
+# ============================================================================
+# PDF Download Endpoint
+# ============================================================================
+
+@router.get("/download/{document_id}")
+async def download_pdf(
+    document_id: str,
+    user: TelegramUser = Depends(get_current_telegram_user),
+):
+    """
+    Download a PDF document with quota enforcement.
+
+    Returns the PDF file with appropriate headers for browser download.
+    Enforces daily download limits per subscription tier.
+    """
+    import time
+
+    start_time = time.time()
+
+    if not user.db_record:
+        raise HTTPException(status_code=401, detail="Authentication required")
+
+    telegram_id = user.id
+    user_tier = user.db_record.get("tier", "free")
+
+    # Check download quota
+    remaining = await tg_repo.get_download_quota_remaining(telegram_id)
+    if remaining == -2:
+        # Log failed download - user not found
+        await tg_repo.log_pdf_download(
+            telegram_id=telegram_id,
+            document_id=document_id,
+            document_title="Unknown",
+            collection="unknown",
+            user_tier=user_tier,
+            response_time_ms=int((time.time() - start_time) * 1000),
+            success=False,
+            error_type="user_not_found"
+        )
+        raise HTTPException(status_code=401, detail="User not found")
+    if remaining == 0:
+        # Log failed download - quota exhausted
+        await tg_repo.log_pdf_download(
+            telegram_id=telegram_id,
+            document_id=document_id,
+            document_title="Unknown",
+            collection="unknown",
+            user_tier=user_tier,
+            response_time_ms=int((time.time() - start_time) * 1000),
+            success=False,
+            error_type="quota_exhausted"
+        )
+        raise HTTPException(status_code=429, detail="Download quota exhausted. Upgrade your plan for more downloads.")
+
+    # Determine collection from document_id prefix
+    if document_id.startswith("maglib:"):
+        collection = "maglib"
+        doc_id = document_id.replace("maglib:", "")
+        db_config = {
+            "host": os.getenv("PGVECTOR_HOST", "localhost"),
+            "port": int(os.getenv("PGVECTOR_PORT", "5432")),
+            "database": os.getenv("PGVECTOR_DATABASE", "magick_knowledge"),
+            "user": os.getenv("PGVECTOR_USER", "docling"),
+            "password": os.getenv("PGVECTOR_PASSWORD", "docling_secure_pwd_2024"),
+        }
+    elif document_id.startswith("bibliothek:"):
+        collection = "bibliothek"
+        doc_id = document_id.replace("bibliothek:", "")
+        db_config = {
+            "host": os.getenv("BIBLIOTHEK_HOST", "localhost"),
+            "port": int(os.getenv("BIBLIOTHEK_PORT", "5433")),
+            "database": os.getenv("BIBLIOTHEK_DATABASE", "bibliothek_knowledge"),
+            "user": os.getenv("BIBLIOTHEK_USER", "docling"),
+            "password": os.getenv("BIBLIOTHEK_PASSWORD", "docling_secure_pwd_2024"),
+        }
+    else:
+        raise HTTPException(status_code=400, detail="Invalid document ID format")
+
+    # Query pgvector to get document filename and title
+    try:
+        conn = psycopg2.connect(**db_config)
+        cursor = conn.cursor()
+        cursor.execute(
+            "SELECT filename, title FROM documents WHERE id = %s LIMIT 1",
+            (doc_id,)
+        )
+        doc_row = cursor.fetchone()
+        cursor.close()
+        conn.close()
+
+        if not doc_row:
+            # Log failed download - document not found
+            await tg_repo.log_pdf_download(
+                telegram_id=telegram_id,
+                document_id=document_id,
+                document_title="Unknown",
+                collection=collection,
+                user_tier=user_tier,
+                response_time_ms=int((time.time() - start_time) * 1000),
+                success=False,
+                error_type="document_not_found"
+            )
+            raise HTTPException(status_code=404, detail="Document not found")
+
+        filename, document_title = doc_row
+    except HTTPException:
+        raise  # Re-raise HTTP exceptions (already logged)
+    except Exception as e:
+        logger.error(f"Database error querying document: {e}")
+        # Log failed download - database error
+        await tg_repo.log_pdf_download(
+            telegram_id=telegram_id,
+            document_id=document_id,
+            document_title="Unknown",
+            collection=collection,
+            user_tier=user_tier,
+            response_time_ms=int((time.time() - start_time) * 1000),
+            success=False,
+            error_type="database_error"
+        )
+        raise HTTPException(status_code=500, detail="Database error")
+
+    # Check if file exists
+    pdf_path = pathlib.Path("/mnt/smb_terra/ALL-PDFs") / filename
+    if not pdf_path.exists():
+        # Log failed download - file not found
+        await tg_repo.log_pdf_download(
+            telegram_id=telegram_id,
+            document_id=document_id,
+            document_title=document_title or filename,
+            collection=collection,
+            user_tier=user_tier,
+            response_time_ms=int((time.time() - start_time) * 1000),
+            success=False,
+            error_type="file_not_found"
+        )
+        raise HTTPException(status_code=404, detail="PDF file not found on server")
+
+    # Get file size in MB
+    file_size_mb = pdf_path.stat().st_size / (1024 * 1024)
+
+    # Deduct download credit
+    if not await tg_repo.deduct_download_credit(telegram_id):
+        raise HTTPException(status_code=429, detail="Download quota exhausted")
+
+    # Log download for analytics
+    await tg_repo.log_pdf_download(
+        telegram_id=telegram_id,
+        document_id=document_id,
+        document_title=document_title or filename,
+        collection=collection,
+        file_size_mb=file_size_mb,
+        user_tier=user_tier,
+        response_time_ms=int((time.time() - start_time) * 1000),
+        success=True,
+        error_type=None
+    )
+
+    # Stream the file
+    return FileResponse(
+        path=pdf_path,
+        media_type="application/pdf",
+        filename=f"{document_title or 'document'}.pdf",
+        headers={
+            "Content-Disposition": f'attachment; filename="{document_title or "document"}.pdf"',
+        }
     )
 
 
@@ -1456,12 +1652,8 @@ async def view_shared_conversation(
     - Saved conversations (marked as public)
     - Unsaved conversations (with share token)
     """
-    # Try saved conversation first
+    # Get shared conversation by share token
     conv = await tg_repo.get_saved_conversation_by_share_token(share_token)
-
-    # If not found, try unsaved conversation share
-    if not conv:
-        conv = await tg_repo.get_conversation_by_share_token(share_token)
 
     if not conv:
         raise HTTPException(status_code=404, detail="Shared conversation not found or expired")
