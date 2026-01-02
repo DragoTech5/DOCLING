@@ -71,6 +71,7 @@ export default function SharePage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [selectedSource, setSelectedSource] = useState<Source | null>(null)
+  const [documentInfo, setDocumentInfo] = useState<{ id: string; title: string; author?: string; cover_url?: string } | null>(null)
 
   // Fetch shared conversation
   useEffect(() => {
@@ -99,6 +100,29 @@ export default function SharePage() {
 
         const data = await response.json()
         setConversation(data)
+
+        // If this is a single-document chat, fetch document info to display in header
+        if (data.documents && data.documents.length === 1) {
+          try {
+            const docId = data.documents[0].id
+            const docResponse = await fetch(`/api/telegram/documents?search=${encodeURIComponent(docId)}`)
+            if (docResponse.ok) {
+              const docData = await docResponse.json()
+              if (docData.data?.documents && docData.data.documents.length > 0) {
+                const doc = docData.data.documents[0]
+                setDocumentInfo({
+                  id: doc.id,
+                  title: doc.title,
+                  author: doc.author,
+                  cover_url: doc.cover_url
+                })
+              }
+            }
+          } catch (err) {
+            console.error('Error fetching document info:', err)
+            // Continue without document info
+          }
+        }
       } catch (err) {
         console.error('Error fetching shared conversation:', err)
         setError('Failed to load shared conversation')
@@ -195,7 +219,7 @@ export default function SharePage() {
           minWidth: '50px',
         }}>
           <img
-            src="/logo-new.png"
+            src="/twa/LOGO-NEW.png"
             alt="Akasha AI"
             style={{
               maxHeight: '48px',
@@ -204,6 +228,10 @@ export default function SharePage() {
               height: 'auto',
               objectFit: 'contain',
               filter: 'drop-shadow(0 0 12px rgba(6, 182, 212, 0.4))',
+            }}
+            onError={(e) => {
+              // Fallback to akasha-logo if LOGO-NEW fails
+              ;(e.target as HTMLImageElement).src = '/twa/akasha-logo.png'
             }}
           />
         </div>
@@ -314,22 +342,50 @@ export default function SharePage() {
 
       {/* Header */}
       <header className="sticky top-0 z-10 bg-tg-header border-b border-tg-hint/20 px-4 py-3">
-        <div className="flex items-center gap-3">
+        <div className="flex items-center justify-center gap-3 relative">
           <button
             onClick={() => {
               hapticFeedback('light')
               navigate('/')
             }}
-            className="text-tg-button text-xl leading-none"
+            className="text-tg-button text-xl leading-none absolute left-0"
           >
             ←
           </button>
-          <div className="flex-1 min-w-0">
-            <h1 className="text-base font-semibold text-tg-text truncate">
-              {conversation.title}
-            </h1>
-            <p className="text-xs text-tg-hint truncate">Shared Conversation</p>
-          </div>
+
+          {/* Single Document Header */}
+          {documentInfo ? (
+            <div className="flex items-center gap-3 flex-1 justify-center min-w-0">
+              {documentInfo.cover_url && (
+                <img
+                  src={documentInfo.cover_url}
+                  alt={documentInfo.title}
+                  className="w-10 h-14 object-cover rounded"
+                  onError={(e) => {
+                    ;(e.target as HTMLImageElement).style.display = 'none'
+                  }}
+                />
+              )}
+              <div className="min-w-0 text-center">
+                <h1 className="text-sm font-semibold text-tg-text line-clamp-2">
+                  {documentInfo.title}
+                </h1>
+                {documentInfo.author && (
+                  <p className="text-xs text-tg-hint line-clamp-1">
+                    by {documentInfo.author}
+                  </p>
+                )}
+              </div>
+            </div>
+          ) : (
+            /* Default Conversation Header */
+            <div className="text-center flex-1 min-w-0">
+              <h1 className="text-base font-semibold text-tg-text line-clamp-2">
+                {conversation.title}
+              </h1>
+              <p className="text-xs text-tg-hint">Shared Conversation</p>
+            </div>
+          )}
         </div>
       </header>
 

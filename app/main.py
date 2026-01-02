@@ -136,6 +136,9 @@ TWA_DIST_DIR = pathlib.Path(__file__).parent.parent / "telegram-mini-app" / "dis
 if TWA_DIST_DIR.exists():
     # Mount assets directory for JS/CSS files
     app.mount("/twa/assets", StaticFiles(directory=TWA_DIST_DIR / "assets"), name="twa_assets")
+    # Mount root TWA static files (logos, favicons, etc.)
+    # This needs to be mounted BEFORE the catch-all /twa/{path:path} route handler
+    app.mount("/twa", StaticFiles(directory=TWA_DIST_DIR, html=True), name="twa_static")
 
 # Setup templates
 TEMPLATES_DIR.mkdir(parents=True, exist_ok=True)
@@ -189,7 +192,12 @@ app.include_router(payments_router)  # Dodo Payments API (credit cards)
 @app.get("/twa/")
 @app.get("/twa/{path:path}")
 async def telegram_mini_app(path: str = ""):
-    """Serve Telegram Mini App SPA."""
+    """Serve Telegram Mini App SPA.
+
+    Note: Static file mounts (/twa and /twa/assets) take precedence over this route,
+    so .png, .ico, .js, .css, etc. files are served before this handler is called.
+    This handler only catches SPA routes like /twa/chat, /twa/archive, etc.
+    """
     from fastapi.responses import FileResponse
     if TWA_DIST_DIR.exists():
         index_file = TWA_DIST_DIR / "index.html"
