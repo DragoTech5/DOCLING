@@ -19,8 +19,8 @@ numpy==2.2.6
 # torch installed separately via CPU-only index in Dockerfile to reduce image size
 
 # Document Processing
-docling==2.8.2
-docling-core==2.8.2
+docling==2.57.0
+docling-core==2.57.0
 
 # Database
 asyncpg==0.30.0
