@@ -9,8 +9,8 @@ WORKDIR /app
 # Copy only package files first (for better cache)
 COPY telegram-mini-app/package.json telegram-mini-app/package-lock.json ./telegram-mini-app/
 
-# Install frontend dependencies (production only, no devDependencies in final build)
-RUN cd telegram-mini-app && npm ci --frozen-lockfile --omit=dev
+# Install frontend dependencies
+RUN cd telegram-mini-app && npm ci --frozen-lockfile
 
 # Copy frontend source
 COPY telegram-mini-app/src ./telegram-mini-app/src
