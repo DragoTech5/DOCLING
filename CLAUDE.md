@@ -67,13 +67,14 @@
 
 ## Testing & Deployment
 
-### ⚠️ CRITICAL: PRODUCTION URL TESTING ONLY
-**MANDATORY RULE**: ONLY test/validate against the LIVE RAILWAY TELEGRAM MINI APP URL. NEVER test localhost unless debugging local backend issues.
-- **Live URL**: `https://select-signature-lloyd-trails.trycloudflare.com/twa/`
-- **Why**: Localhost tests don't prove Railway deployment works. Must test actual production URL that users access
-- **Verification**: Always check Railway deployment logs, NEVER assume localhost success = production success
-- **Test Scenario**: Select doc → ask question → back → select DIFFERENT doc → ask question (must get NEW doc context)
-- **Success Criteria**: MUST run 4 consecutive tests with 4 DIFFERENT documents, each returning context-aware responses. Generic responses = FAILURE. Only 4/4 all-pass = system is successful.
+### ⚠️ CRITICAL: TELEGRAM BOT TESTING ONLY - NOT WEB TUNNEL
+**MANDATORY RULE**: ONLY test on the ACTUAL TELEGRAM BOT `https://web.telegram.org/k/#@AkashaAIHub_bot`
+- **Correct URL**: `https://web.telegram.org/k/#@AkashaAIHub_bot` (the real Telegram bot that users use)
+- **WRONG**: `https://select-signature-lloyd-trails.trycloudflare.com/twa/` (Cloudflare web tunnel - can mislead about actual deployment status)
+- **Why**: The web tunnel and Telegram bot are SEPARATE DEPLOYMENTS. Web tunnel may work while bot is broken. Always test what users actually use.
+- **Verification**: Test ONLY in actual Telegram bot. User responses = truth. Web tunnel = irrelevant.
+- **Test Scenario**: Open Telegram bot → select document → ask specific question → verify context-aware response (not generic "couldn't find information")
+- **Success Criteria**: MUST run 4 consecutive tests with 4 DIFFERENT documents in ACTUAL TELEGRAM BOT, each returning context-aware responses. Generic responses = FAILURE. Only 4/4 all-pass = system is successful.
 
 ### Clean Build + Deploy Procedure
 After ANY frontend code changes:
