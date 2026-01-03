@@ -3,7 +3,13 @@
 
 set -e
 
+# Explicitly set environment variables with defaults to ensure they're available
+PORT="${PORT:-8200}"
+HOST="${HOST:-0.0.0.0}"
+SMB_MOUNT_ENABLED="${SMB_MOUNT_ENABLED:-false}"
+
 echo "=== Docling Entrypoint ==="
+echo "Configured: HOST=$HOST, PORT=$PORT, SMB_MOUNT_ENABLED=$SMB_MOUNT_ENABLED"
 
 # Check if SMB mount is needed
 if [ "$SMB_MOUNT_ENABLED" = "true" ]; then
@@ -43,8 +49,8 @@ if [ ! -d "/app/data" ]; then
 fi
 
 echo "Starting Docling application..."
-echo "HOST: ${HOST:-0.0.0.0}"
-echo "PORT: ${PORT:-8200}"
+echo "HOST: $HOST"
+echo "PORT: $PORT"
 
 # Start the FastAPI application
-exec uvicorn app.main:app --host "${HOST:-0.0.0.0}" --port "${PORT:-8200}"
+exec uvicorn app.main:app --host "$HOST" --port "$PORT"
