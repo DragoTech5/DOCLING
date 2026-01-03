@@ -699,14 +699,19 @@ export default function ChatPage() {
           // CRITICAL: Only call setCurrentConversation, which now atomically updates both
           // currentConversation and selectedPdfIds in a single state update
           // This ensures proper state synchronization when switching documents
-          setCurrentConversation({
+          const newConversation = {
             id: `new-${Date.now()}`,
             title: 'New Chat',
             messages: [],
             pdfIds: docIds,
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString(),
-          })
+          }
+          setCurrentConversation(newConversation)
+          // SAFETY: Also explicitly set selectedPdfIds to ensure store is in sync
+          // This prevents race conditions when navigating back/forth
+          setSelectedPdfIds(docIds)
+          console.log('🔒 FORCE-SYNCED selectedPdfIds to:', docIds)
         }
       }
     } else {
@@ -721,6 +726,8 @@ export default function ChatPage() {
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       })
+      // SAFETY: Explicitly clear selectedPdfIds
+      setSelectedPdfIds([])
     }
 
     if (!initialized) {
