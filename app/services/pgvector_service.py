@@ -697,7 +697,7 @@ async def _hybrid_search_single(
 
         rows = await conn.fetch(
             """
-            SELECT * FROM hybrid_search($1::vector, $2, $3, $4, $5, $6)
+            SELECT * FROM hybrid_search($1::vector, $2, $3, $4, $5, $6::integer[])
             """,
             embedding_str,
             query_text,
@@ -751,7 +751,7 @@ async def _hybrid_search_per_document(
         for doc_id in document_ids:
             rows = await conn.fetch(
                 """
-                SELECT * FROM hybrid_search($1::vector, $2, $3, $4, $5, $6)
+                SELECT * FROM hybrid_search($1::vector, $2, $3, $4, $5, $6::integer[])
                 """,
                 embedding_str,
                 query_text,
