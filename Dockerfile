@@ -9,8 +9,8 @@ WORKDIR /app
 # Copy only package files first (for better cache)
 COPY telegram-mini-app/package.json telegram-mini-app/package-lock.json ./telegram-mini-app/
 
-# Install frontend dependencies
-RUN cd telegram-mini-app && npm ci --frozen-lockfile
+# Install frontend dependencies (production only, no devDependencies in final build)
+RUN cd telegram-mini-app && npm ci --frozen-lockfile --omit=dev
 
 # Copy frontend source
 COPY telegram-mini-app/src ./telegram-mini-app/src
@@ -22,21 +22,19 @@ COPY telegram-mini-app/tailwind.config.js ./telegram-mini-app/
 COPY telegram-mini-app/postcss.config.js ./telegram-mini-app/
 COPY telegram-mini-app/index.html ./telegram-mini-app/
 
-# Build frontend
-RUN cd telegram-mini-app && npm run build
+# Build frontend and remove node_modules to reduce final image size
+RUN cd telegram-mini-app && npm run build && rm -rf node_modules
 
 # Stage 2: Python runtime with FastAPI backend (using Debian slim for wheel compatibility)
 FROM python:3.11-slim
 
 WORKDIR /app
 
-# Install system dependencies for Python packages (PostgreSQL client libs, SSH, build tools, ML libraries, SMB)
-# Use single RUN command with proper apt caching to avoid timeouts
+# Stage 2a: Build and install dependencies with build tools
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     postgresql-client \
     openssh-client \
-    git \
     python3-dev \
     libjpeg-dev \
     libpng-dev \
@@ -44,12 +42,22 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libssl-dev \
     libffi-dev \
     cifs-utils \
+    && pip install --upgrade pip setuptools wheel \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy Python requirements and install dependencies
 COPY requirements.txt .
-RUN pip install --upgrade pip setuptools wheel && \
-    pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt && \
+    apt-get remove -y --purge \
+    build-essential \
+    python3-dev \
+    libjpeg-dev \
+    libpng-dev \
+    libfreetype6-dev \
+    libffi-dev \
+    && apt-get autoremove -y && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
 # Copy backend source
 COPY app ./app
