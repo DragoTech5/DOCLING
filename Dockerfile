@@ -78,7 +78,6 @@ EXPOSE 8200
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
     CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8200/health')" || exit 1
 
-# PORT is set by Railway deployment platform
-# HOST defaults to 0.0.0.0
-# SMB_MOUNT_ENABLED controls whether to mount NAS data via SMB (for persistent storage)
-ENTRYPOINT ["/bin/bash", "-c", "exec /docker-entrypoint.sh"]
+# Start uvicorn directly with proper variable expansion
+# Railway sets PORT at runtime; default to 8200 if not set
+CMD ["sh", "-c", "exec uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8200}"]
