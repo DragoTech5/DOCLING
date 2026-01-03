@@ -67,10 +67,6 @@ COPY .env.railway .env
 # Copy built frontend from stage 1
 COPY --from=frontend-builder /app/telegram-mini-app/dist ./app/static/twa
 
-# Copy entrypoint script for SMB mount support
-COPY docker-entrypoint.sh /docker-entrypoint.sh
-RUN chmod +x /docker-entrypoint.sh
-
 # Expose port
 EXPOSE 8200
 
@@ -78,6 +74,5 @@ EXPOSE 8200
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
     CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8200/health')" || exit 1
 
-# Start uvicorn with hardcoded port to verify application works
-# If this works, the issue is with variable expansion, not the app itself
-CMD exec uvicorn app.main:app --host 0.0.0.0 --port 8200
+# Start uvicorn directly - using JSON array form with explicit shell
+CMD ["/bin/sh", "-c", "exec uvicorn app.main:app --host 0.0.0.0 --port 8200"]
