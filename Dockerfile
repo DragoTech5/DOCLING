@@ -81,4 +81,4 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
 # PORT is set by Railway deployment platform
 # HOST defaults to 0.0.0.0
 # SMB_MOUNT_ENABLED controls whether to mount NAS data via SMB (for persistent storage)
-ENTRYPOINT ["/bin/sh", "-c", "exec /docker-entrypoint.sh"]
+ENTRYPOINT ["/bin/bash", "-c", "exec /docker-entrypoint.sh"]
