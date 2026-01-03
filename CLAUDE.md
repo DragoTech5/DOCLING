@@ -76,6 +76,21 @@
 - **Test Scenario**: Open Telegram bot → select document → ask specific question → verify context-aware response (not generic "couldn't find information")
 - **Success Criteria**: MUST run 4 consecutive tests with 4 DIFFERENT documents in ACTUAL TELEGRAM BOT, each returning context-aware responses. Generic responses = FAILURE. Only 4/4 all-pass = system is successful.
 
+### ⚠️ CRITICAL: DEPLOYMENT IS MANDATORY AFTER EVERY SUCCESS
+**AFTER EVERY SUCCESSFUL IMPLEMENTATION TASK:**
+1. Commit all code changes with meaningful commit message
+2. Push to GitHub: `git push origin feature/railway-nas-hybrid-deployment`
+3. **MANUALLY DEPLOY ON RAILWAY** (auto-deploy does NOT work reliably):
+   - Go to https://railway.app/dashboard
+   - Find DOCLING project → backend service
+   - Click "Deploy" button
+   - Wait for deployment status to show "ONLINE"
+4. Test ONLY on actual Telegram bot: `https://web.telegram.org/k/#@AkashaAIHub_bot`
+5. Verify 4 consecutive tests with different documents return context-aware responses
+6. If tests fail = deployment failed = do NOT mark task as complete
+
+**CODE IN GIT ≠ CODE IN PRODUCTION. Always deploy manually.**
+
 ### Clean Build + Deploy Procedure
 After ANY frontend code changes:
 ```bash
