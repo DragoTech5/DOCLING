@@ -20,7 +20,7 @@ numpy==2.2.6
 
 # Database
 asyncpg==0.30.0
-aiosqlite==3.2.1
+aiosqlite==0.22.1
 rank_bm25==0.2.2
 sshtunnel==0.4.0
 
