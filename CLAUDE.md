@@ -67,6 +67,13 @@
 
 ## Testing & Deployment
 
+### ⚠️ CRITICAL: PRODUCTION URL TESTING ONLY
+**MANDATORY RULE**: ONLY test/validate against the LIVE RAILWAY TELEGRAM MINI APP URL. NEVER test localhost unless debugging local backend issues.
+- **Live URL**: `https://select-signature-lloyd-trails.trycloudflare.com/twa/`
+- **Why**: Localhost tests don't prove Railway deployment works. Must test actual production URL that users access
+- **Verification**: Always check Railway deployment logs, NEVER assume localhost success = production success
+- **Test Scenario**: Select doc → ask question → back → select DIFFERENT doc → ask question (must get NEW doc context)
+
 ### Clean Build + Deploy Procedure
 After ANY frontend code changes:
 ```bash
