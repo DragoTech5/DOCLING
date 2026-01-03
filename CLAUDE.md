@@ -73,6 +73,7 @@
 - **Why**: Localhost tests don't prove Railway deployment works. Must test actual production URL that users access
 - **Verification**: Always check Railway deployment logs, NEVER assume localhost success = production success
 - **Test Scenario**: Select doc → ask question → back → select DIFFERENT doc → ask question (must get NEW doc context)
+- **Success Criteria**: MUST run 4 consecutive tests with 4 DIFFERENT documents, each returning context-aware responses. Generic responses = FAILURE. Only 4/4 all-pass = system is successful.
 
 ### Clean Build + Deploy Procedure
 After ANY frontend code changes:
