@@ -126,15 +126,18 @@ async def create_or_update_telegram_user(
             return dict(row)
         else:
             # Create new user
+            # Calculate quota reset time (tomorrow at UTC midnight)
+            tomorrow_utc = (datetime.utcnow() + timedelta(days=1)).isoformat() + "Z"
+
             if is_whitelisted:
                 # Whitelisted users get enterprise tier
                 cursor = await db.execute(
                     """INSERT INTO telegram_users
                        (telegram_id, first_name, last_name, username, language_code, is_premium,
-                        tier, queries_used, queries_remaining)
-                       VALUES (?, ?, ?, ?, ?, ?, 'enterprise', 0, 999999)""",
+                        tier, queries_used, queries_remaining, downloads_used, downloads_remaining, download_quota_resets_at)
+                       VALUES (?, ?, ?, ?, ?, ?, 'enterprise', 0, 999999, 0, 999999, ?)""",
                     (telegram_id, first_name, last_name, username, language_code,
-                     1 if is_premium else 0),
+                     1 if is_premium else 0, tomorrow_utc),
                 )
                 import logging
                 logging.getLogger(__name__).info(f"DEV WHITELIST: Created enterprise user for telegram_id={telegram_id}")
@@ -144,10 +147,11 @@ async def create_or_update_telegram_user(
                 cursor = await db.execute(
                     """INSERT INTO telegram_users
                        (telegram_id, first_name, last_name, username, language_code, is_premium,
-                        tier, queries_used, queries_remaining)
-                       VALUES (?, ?, ?, ?, ?, ?, 'free', 0, ?)""",
+                        tier, queries_used, queries_remaining, downloads_used, downloads_remaining, download_quota_resets_at)
+                       VALUES (?, ?, ?, ?, ?, ?, 'free', 0, ?, 0, ?, ?)""",
                     (telegram_id, first_name, last_name, username, language_code,
-                     1 if is_premium else 0, tier_limits["monthly_queries"]),
+                     1 if is_premium else 0, tier_limits["monthly_queries"],
+                     tier_limits.get("daily_downloads", 1), tomorrow_utc),
                 )
             await db.commit()
 
@@ -255,6 +259,158 @@ async def reset_monthly_queries(telegram_id: int) -> bool:
         cursor = await db.execute(
             "UPDATE telegram_users SET queries_used = 0, queries_remaining = ? WHERE telegram_id = ?",
             (monthly_queries, telegram_id),
+        )
+        await db.commit()
+        return cursor.rowcount > 0
+
+
+# ============================================================================
+# PDF Download Quota Management
+# ============================================================================
+
+async def deduct_download_credit(telegram_id: int) -> bool:
+    """Deduct one download credit from user. Returns False if no credits remaining."""
+    async with aiosqlite.connect(get_db_path()) as db:
+        # Check current downloads_remaining and tier
+        cursor = await db.execute(
+            "SELECT downloads_remaining, tier FROM telegram_users WHERE telegram_id = ?",
+            (telegram_id,),
+        )
+        row = await cursor.fetchone()
+        if not row:
+            return False
+
+        downloads_remaining = row[0]
+        tier = row[1]
+
+        # Get tier limits
+        tier_limits = TIER_LIMITS.get(tier, TIER_LIMITS["free"])
+        if tier_limits.get("daily_downloads") is None:
+            # Unlimited - just increment used count
+            await db.execute(
+                "UPDATE telegram_users SET downloads_used = downloads_used + 1 WHERE telegram_id = ?",
+                (telegram_id,),
+            )
+            await db.commit()
+            return True
+
+        # Check if credits available
+        if downloads_remaining <= 0:
+            return False
+
+        # Deduct credit
+        cursor = await db.execute(
+            """UPDATE telegram_users SET
+               downloads_used = downloads_used + 1,
+               downloads_remaining = downloads_remaining - 1
+               WHERE telegram_id = ? AND downloads_remaining > 0""",
+            (telegram_id,),
+        )
+        await db.commit()
+        return cursor.rowcount > 0
+
+
+async def reset_daily_downloads(telegram_id: int) -> bool:
+    """Reset daily downloads for a user (called daily at UTC midnight)."""
+    async with aiosqlite.connect(get_db_path()) as db:
+        cursor = await db.execute(
+            "SELECT tier FROM telegram_users WHERE telegram_id = ?",
+            (telegram_id,),
+        )
+        row = await cursor.fetchone()
+        if not row:
+            return False
+
+        tier = row[0]
+        tier_limits = TIER_LIMITS.get(tier, TIER_LIMITS["free"])
+        daily_downloads = tier_limits.get("daily_downloads", 1)
+
+        if daily_downloads is None:
+            return True  # Unlimited, nothing to reset
+
+        # Reset downloads_used and downloads_remaining, update reset time
+        tomorrow_utc = (datetime.utcnow() + timedelta(days=1)).isoformat() + "Z"
+        cursor = await db.execute(
+            """UPDATE telegram_users
+               SET downloads_used = 0,
+                   downloads_remaining = ?,
+                   download_quota_resets_at = ?
+               WHERE telegram_id = ?""",
+            (daily_downloads, tomorrow_utc, telegram_id),
+        )
+        await db.commit()
+        return cursor.rowcount > 0
+
+
+async def get_download_quota_remaining(telegram_id: int) -> int:
+    """Get remaining download quota for user. Returns -1 for unlimited, -2 for user not found."""
+    async with aiosqlite.connect(get_db_path()) as db:
+        cursor = await db.execute(
+            "SELECT downloads_remaining, tier, download_quota_resets_at FROM telegram_users WHERE telegram_id = ?",
+            (telegram_id,),
+        )
+        row = await cursor.fetchone()
+        if not row:
+            return -2  # User not found
+
+        downloads_remaining = row[0]
+        tier = row[1]
+        reset_at = row[2]
+
+        # Check if quota needs reset
+        if reset_at:
+            reset_time = datetime.fromisoformat(reset_at.replace("Z", "+00:00"))
+            if datetime.utcnow() > reset_time.replace(tzinfo=None):
+                # Quota needs reset
+                await reset_daily_downloads(telegram_id)
+                # Fetch updated value
+                cursor = await db.execute(
+                    "SELECT downloads_remaining FROM telegram_users WHERE telegram_id = ?",
+                    (telegram_id,),
+                )
+                row = await cursor.fetchone()
+                downloads_remaining = row[0] if row else 0
+
+        # Check if unlimited
+        tier_limits = TIER_LIMITS.get(tier, TIER_LIMITS["free"])
+        if tier_limits.get("daily_downloads") is None:
+            return -1  # Unlimited
+
+        return downloads_remaining
+
+
+async def log_pdf_download(
+    telegram_id: int,
+    document_id: str,
+    document_title: str,
+    collection: str,
+    file_size_mb: float | None = None,
+    ip_address: str | None = None,
+    user_tier: str = "free",
+    response_time_ms: int | None = None,
+    success: bool = True,
+    error_type: str | None = None,
+) -> bool:
+    """Log a PDF download event for analytics and audit trail."""
+    async with aiosqlite.connect(get_db_path()) as db:
+        cursor = await db.execute(
+            "SELECT id FROM telegram_users WHERE telegram_id = ?",
+            (telegram_id,),
+        )
+        row = await cursor.fetchone()
+        if not row:
+            return False
+
+        user_id = row[0]
+
+        # Insert download record with analytics data
+        cursor = await db.execute(
+            """INSERT INTO pdf_downloads
+               (telegram_user_id, document_id, document_title, collection, file_size_mb, ip_address,
+                user_tier, response_time_ms, success, error_type)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            (user_id, document_id, document_title, collection, file_size_mb, ip_address,
+             user_tier, response_time_ms, 1 if success else 0, error_type),
         )
         await db.commit()
         return cursor.rowcount > 0

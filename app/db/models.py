@@ -112,6 +112,9 @@ class TelegramUserRecord(TypedDict):
     tier: str  # 'free', 'starter', 'pro', 'business', 'enterprise'
     queries_used: int
     queries_remaining: int
+    downloads_used: int
+    downloads_remaining: int
+    download_quota_resets_at: str | None
     subscription_ends_at: str | None
     created_at: str
     updated_at: str
@@ -236,8 +239,9 @@ SubscriptionTier = Literal["free", "starter", "pro", "unlimited", "business", "e
 TIER_LIMITS = {
     "free": {
         "max_pdfs": 1,                    # Document selections (MVP v1 not implemented)
-        "daily_queries": 3,               # MVP v1: 3 questions per day
-        "monthly_queries": 3,             # Legacy: same as daily for backwards compat
+        "daily_queries": 6,               # Updated: 3 → 6 questions per day
+        "monthly_queries": 6,             # Legacy: same as daily for backwards compat
+        "daily_downloads": 1,             # NEW: 1 PDF download per day
         "max_saved_conversations": 0,     # MVP v1: cannot save conversations
         "history_days": 30,
         "price_stars": 0,
@@ -248,6 +252,7 @@ TIER_LIMITS = {
         "max_pdfs": None,                 # MVP v1: doc selection not implemented
         "daily_queries": 25,              # MVP v1: 25 questions per day
         "monthly_queries": 25,            # Legacy
+        "daily_downloads": 3,             # NEW: 3 PDF downloads per day
         "max_saved_conversations": None,  # MVP v1: unlimited saves
         "history_days": 90,
         "price_stars": 430,               # ~$9.99 USD (approx)
@@ -258,6 +263,7 @@ TIER_LIMITS = {
         "max_pdfs": None,                 # MVP v1: doc selection not implemented
         "daily_queries": 60,              # MVP v1: 60 questions per day
         "monthly_queries": 60,            # Legacy
+        "daily_downloads": 12,            # NEW: 12 PDF downloads per day
         "max_saved_conversations": None,  # MVP v1: unlimited saves
         "history_days": 365,
         "price_stars": 860,               # ~$19.99 USD (approx)
@@ -268,6 +274,7 @@ TIER_LIMITS = {
         "max_pdfs": None,                 # Unlimited
         "daily_queries": None,            # Unlimited
         "monthly_queries": None,          # Legacy
+        "daily_downloads": None,          # NEW: Unlimited PDF downloads
         "max_saved_conversations": None,  # Unlimited saved conversations/chats
         "history_days": None,
         "price_stars": 2298,              # ~$49.99 USD (approx)
@@ -278,6 +285,7 @@ TIER_LIMITS = {
         "max_pdfs": None,                 # Unlimited
         "daily_queries": None,            # Unlimited
         "monthly_queries": None,          # Legacy
+        "daily_downloads": None,          # NEW: Unlimited PDF downloads
         "max_saved_conversations": None,  # Unlimited
         "history_days": None,
         "price_stars": None,              # Admin only - no payment
@@ -289,6 +297,7 @@ TIER_LIMITS = {
         "max_pdfs": None,
         "daily_queries": 20,
         "monthly_queries": 20,
+        "daily_downloads": 3,             # NEW: Aligned with starter
         "max_saved_conversations": None,
         "history_days": 90,
         "price_stars": 915,
@@ -299,6 +308,7 @@ TIER_LIMITS = {
         "max_pdfs": None,
         "daily_queries": 100,
         "monthly_queries": 100,
+        "daily_downloads": 12,            # NEW: Aligned with pro
         "max_saved_conversations": None,
         "history_days": 365,
         "price_stars": 2298,
@@ -309,6 +319,7 @@ TIER_LIMITS = {
         "max_pdfs": None,
         "daily_queries": None,
         "monthly_queries": None,
+        "daily_downloads": None,          # NEW: Unlimited PDF downloads
         "max_saved_conversations": None,
         "history_days": None,
         "price_stars": 2298,              # ~$49.99 USD (approx)
@@ -503,6 +514,9 @@ CREATE TABLE IF NOT EXISTS telegram_users (
     tier TEXT NOT NULL DEFAULT 'free' CHECK (tier IN ('free', 'starter', 'scholar', 'pro', 'researcher', 'business', 'enterprise')),
     queries_used INTEGER DEFAULT 0,
     queries_remaining INTEGER DEFAULT 20,
+    downloads_used INTEGER DEFAULT 0,
+    downloads_remaining INTEGER DEFAULT 1,
+    download_quota_resets_at TEXT,
     subscription_ends_at TEXT,
     created_at TEXT NOT NULL DEFAULT (datetime('now')),
     updated_at TEXT NOT NULL DEFAULT (datetime('now'))
@@ -534,6 +548,23 @@ CREATE TABLE IF NOT EXISTS payment_history (
     status TEXT NOT NULL DEFAULT 'completed' CHECK (status IN ('completed', 'refunded')),
     created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
+
+-- PDF Download history and audit trail
+CREATE TABLE IF NOT EXISTS pdf_downloads (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    telegram_user_id INTEGER NOT NULL REFERENCES telegram_users(id) ON DELETE CASCADE,
+    document_id TEXT NOT NULL,
+    document_title TEXT NOT NULL,
+    collection TEXT NOT NULL CHECK (collection IN ('maglib', 'bibliothek')),
+    file_size_mb REAL,
+    ip_address TEXT,
+    downloaded_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+-- Indexes for pdf_downloads table
+CREATE INDEX IF NOT EXISTS idx_pdf_downloads_user_id ON pdf_downloads(telegram_user_id);
+CREATE INDEX IF NOT EXISTS idx_pdf_downloads_document_id ON pdf_downloads(document_id);
+CREATE INDEX IF NOT EXISTS idx_pdf_downloads_downloaded_at ON pdf_downloads(downloaded_at);
 
 -- Telegram conversations (separate from main conversations)
 CREATE TABLE IF NOT EXISTS tg_conversations (
@@ -858,6 +889,45 @@ async def migrate_saved_conversations(db: aiosqlite.Connection) -> None:
     print("Saved conversations migration complete.")
 
 
+async def migrate_pdf_downloads_analytics(db: aiosqlite.Connection) -> None:
+    """Migrate pdf_downloads table to add analytics columns."""
+    cursor = await db.execute("PRAGMA table_info(pdf_downloads)")
+    columns = [row[1] for row in await cursor.fetchall()]
+
+    analytics_columns = {
+        "user_tier": "TEXT DEFAULT 'free'",
+        "response_time_ms": "INTEGER",
+        "success": "INTEGER DEFAULT 1",
+        "error_type": "TEXT"
+    }
+
+    for col_name, col_def in analytics_columns.items():
+        if col_name not in columns:
+            print(f"Adding {col_name} column to pdf_downloads...")
+            await db.execute(f"ALTER TABLE pdf_downloads ADD COLUMN {col_name} {col_def}")
+
+    await db.commit()
+
+
+async def migrate_telegram_users_download_quota(db: aiosqlite.Connection) -> None:
+    """Add download quota columns to telegram_users table."""
+    cursor = await db.execute("PRAGMA table_info(telegram_users)")
+    columns = [row[1] for row in await cursor.fetchall()]
+
+    download_columns = {
+        "downloads_used": "INTEGER DEFAULT 0",
+        "downloads_remaining": "INTEGER DEFAULT 1",
+        "download_quota_resets_at": "TEXT"
+    }
+
+    for col_name, col_def in download_columns.items():
+        if col_name not in columns:
+            print(f"Adding {col_name} column to telegram_users...")
+            await db.execute(f"ALTER TABLE telegram_users ADD COLUMN {col_name} {col_def}")
+
+    await db.commit()
+
+
 async def init_database() -> None:
     """Initialize the SQLite database with schema and default data."""
     db_path = config.database.sqlite_path
@@ -869,6 +939,8 @@ async def init_database() -> None:
         await migrate_jobs_priority(db)
         await migrate_conversations_use_maglib(db)
         await migrate_saved_conversations(db)
+        await migrate_telegram_users_download_quota(db)
+        await migrate_pdf_downloads_analytics(db)
 
         # Now execute the full schema (CREATE IF NOT EXISTS is safe)
         await db.executescript(SCHEMA)
