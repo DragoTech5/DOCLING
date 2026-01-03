@@ -9,7 +9,10 @@ HOST="${HOST:-0.0.0.0}"
 SMB_MOUNT_ENABLED="${SMB_MOUNT_ENABLED:-false}"
 
 echo "=== Docling Entrypoint ==="
-echo "Configured: HOST=$HOST, PORT=$PORT, SMB_MOUNT_ENABLED=$SMB_MOUNT_ENABLED"
+echo "PORT value: [$PORT] (length: ${#PORT})"
+echo "HOST value: [$HOST]"
+echo "SMB_MOUNT_ENABLED value: [$SMB_MOUNT_ENABLED]"
+echo "About to execute uvicorn with: --host '$HOST' --port '$PORT'"
 
 # Check if SMB mount is needed
 if [ "$SMB_MOUNT_ENABLED" = "true" ]; then
