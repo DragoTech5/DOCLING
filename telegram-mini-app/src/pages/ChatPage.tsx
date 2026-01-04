@@ -753,6 +753,18 @@ export default function ChatPage() {
     })()
   }, [loadPdfs])
 
+  // CRITICAL: Reset availablePdfs when selectedPdfIds changes to different documents
+  // This prevents stale document cache from interfering with new document selections
+  // Fixes bug where back-navigation + new PDF selection returns no context
+  useEffect(() => {
+    if (selectedPdfIds.length > 0) {
+      console.log('🔄 selectedPdfIds changed, reloading documents for new selection')
+      ;(async () => {
+        await loadPdfs()
+      })()
+    }
+  }, [selectedPdfIds.join(',')])
+
   // Setup back button
   useEffect(() => {
     showBackButton(() => {
