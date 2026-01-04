@@ -36,7 +36,8 @@ for dir_path in [DATA_DIR, UPLOADS_DIR, CHROMADB_DIR, TRANSCRIPTS_DIR, LOGS_DIR]
 class ServerConfig:
     """Server configuration"""
     host: str = field(default_factory=lambda: os.getenv("HOST", "0.0.0.0"))
-    port: int = field(default_factory=lambda: int(os.getenv("PORT", "8200")))
+    # Port is hardcoded in Dockerfile CMD, don't read from environment to avoid issues
+    port: int = 8200
     debug: bool = False
     workers: int = 1
 
