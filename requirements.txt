@@ -1,8 +1,9 @@
-# Core FastAPI and async
+# Core FastAPI and async dependencies
 fastapi==0.122.0
 uvicorn==0.38.0
 pydantic==2.12.4
 pydantic-settings==2.12.0
+pydantic-extra-types==2.10.6
 httptools==0.7.1
 uvloop==0.22.1
 python-multipart==0.0.20
@@ -15,25 +16,15 @@ openai==2.8.1
 # Data processing
 pandas==2.3.3
 numpy==2.2.6
+# torch installed separately via CPU-only index in Dockerfile to reduce image size
 
 # Database
 asyncpg==0.30.0
-aiosqlite==0.22.1
 rank_bm25==0.2.2
 sshtunnel==0.4.0
 
 # Vector Database
 weaviate-client==4.18.1
-chromadb>=0.6.2
-
-# Document Processing
-docling>=2.57.0
-docling-core>=2.52.0
-sentence-transformers>=5.0.0
-transformers>=4.40.0
-
-# Task Scheduling
-APScheduler>=3.10.0
 
 # Authentication & Payments
 supabase==2.15.3
@@ -50,10 +41,9 @@ loguru==0.7.3
 tenacity==9.1.2
 tqdm==4.67.1
 beautifulsoup4==4.14.2
-lxml==5.3.0
+lxml==6.0.2
 certifi==2025.11.12
 PyYAML==6.0.3
-yt-dlp>=2025.1.0
 
 # JSON handling
 jsonlines==4.0.0
@@ -62,4 +52,4 @@ orjson==3.11.4
 # Observability
 sentry-sdk==2.46.0
 prometheus-fastapi-instrumentator==7.1.0
-prometheus-client==0.23.1
+prometheus_client==0.23.1
