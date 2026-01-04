@@ -76,9 +76,9 @@ COPY --from=frontend-builder /app/telegram-mini-app/dist ./app/static/twa
 # Expose port
 EXPOSE 8200
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8200/health')" || exit 1
+# Health check - check if port 8200 is listening
+HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
+    CMD netstat -tuln | grep :8200 || exit 1
 
 # Start uvicorn with explicit port and ENTRYPOINT to avoid shell wrapping
 ENTRYPOINT ["uvicorn"]
