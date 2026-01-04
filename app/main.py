@@ -46,7 +46,7 @@ from app.middleware.auth import AuthMiddleware, get_optional_user
 async def lifespan(app: FastAPI):
     """Application lifespan management."""
     # Startup
-    print("Starting Docling Knowledge Hub...")
+    print("🚀 Starting Docling Knowledge Hub... [VERSION: 2026-01-04-FIXED]")
 
     # Show current mode
     mode = "PRIVATE" if config.mode.private_mode else "SAAS"
