@@ -1,5 +1,6 @@
 # Multi-stage build for Docling hybrid monorepo (Python backend + React/Node.js frontend)
 # Optimization: Use Alpine Linux to avoid transient infrastructure timeouts during apt-get
+# Force rebuild - deployment trigger 2026-01-04
 
 # Stage 1: Build frontend (Node.js/Vite)
 FROM node:22-alpine AS frontend-builder
