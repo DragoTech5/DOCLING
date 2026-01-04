@@ -29,8 +29,8 @@ RUN cd telegram-mini-app && npm run build && rm -rf node_modules
 # Stage 2: Python runtime with FastAPI backend (using Debian slim for wheel compatibility)
 FROM python:3.11-slim
 
-# Force complete rebuild - no Docker cache - 2026-01-04T21:04
-ARG CACHE_BUST=2026-01-04T21:04
+# Force complete rebuild - no Docker cache - 2026-01-04T23:10
+ARG CACHE_BUST=2026-01-04T23:10
 RUN echo "Forcing rebuild: $CACHE_BUST"
 
 WORKDIR /app
