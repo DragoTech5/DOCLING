@@ -786,6 +786,16 @@ DEFAULT_CATEGORIES = [
 
 async def migrate_categories_hierarchy(db: aiosqlite.Connection) -> None:
     """Migrate categories table to support hierarchy (parent_id, depth)."""
+    # Check if table exists first
+    cursor = await db.execute(
+        "SELECT name FROM sqlite_master WHERE type='table' AND name='categories'"
+    )
+    table_exists = await cursor.fetchone()
+
+    if not table_exists:
+        # Table doesn't exist yet, skip migration
+        return
+
     # Check if parent_id column exists
     cursor = await db.execute("PRAGMA table_info(categories)")
     columns = [row[1] for row in await cursor.fetchall()]
@@ -810,6 +820,16 @@ async def migrate_categories_hierarchy(db: aiosqlite.Connection) -> None:
 
 async def migrate_jobs_priority(db: aiosqlite.Connection) -> None:
     """Migrate jobs table to add priority column."""
+    # Check if table exists first
+    cursor = await db.execute(
+        "SELECT name FROM sqlite_master WHERE type='table' AND name='jobs'"
+    )
+    table_exists = await cursor.fetchone()
+
+    if not table_exists:
+        # Table doesn't exist yet, skip migration
+        return
+
     cursor = await db.execute("PRAGMA table_info(jobs)")
     columns = [row[1] for row in await cursor.fetchall()]
 
@@ -824,6 +844,16 @@ async def migrate_jobs_priority(db: aiosqlite.Connection) -> None:
 
 async def migrate_conversations_use_maglib(db: aiosqlite.Connection) -> None:
     """Migrate conversations table to add use_maglib column for MAG-LIB pgvector search."""
+    # Check if table exists first
+    cursor = await db.execute(
+        "SELECT name FROM sqlite_master WHERE type='table' AND name='conversations'"
+    )
+    table_exists = await cursor.fetchone()
+
+    if not table_exists:
+        # Table doesn't exist yet, skip migration
+        return
+
     cursor = await db.execute("PRAGMA table_info(conversations)")
     columns = [row[1] for row in await cursor.fetchall()]
 
@@ -891,6 +921,16 @@ async def migrate_saved_conversations(db: aiosqlite.Connection) -> None:
 
 async def migrate_pdf_downloads_analytics(db: aiosqlite.Connection) -> None:
     """Migrate pdf_downloads table to add analytics columns."""
+    # Check if table exists first
+    cursor = await db.execute(
+        "SELECT name FROM sqlite_master WHERE type='table' AND name='pdf_downloads'"
+    )
+    table_exists = await cursor.fetchone()
+
+    if not table_exists:
+        # Table doesn't exist yet, skip migration
+        return
+
     cursor = await db.execute("PRAGMA table_info(pdf_downloads)")
     columns = [row[1] for row in await cursor.fetchall()]
 
@@ -911,6 +951,16 @@ async def migrate_pdf_downloads_analytics(db: aiosqlite.Connection) -> None:
 
 async def migrate_telegram_users_download_quota(db: aiosqlite.Connection) -> None:
     """Add download quota columns to telegram_users table."""
+    # Check if table exists first
+    cursor = await db.execute(
+        "SELECT name FROM sqlite_master WHERE type='table' AND name='telegram_users'"
+    )
+    table_exists = await cursor.fetchone()
+
+    if not table_exists:
+        # Table doesn't exist yet, skip migration
+        return
+
     cursor = await db.execute("PRAGMA table_info(telegram_users)")
     columns = [row[1] for row in await cursor.fetchall()]
 
