@@ -71,7 +71,7 @@ COPY app ./app
 COPY .env.railway .env
 
 # Copy built frontend from stage 1
-COPY --from=frontend-builder /app/telegram-mini-app/dist ./app/static/twa
+COPY --from=frontend-builder /app/telegram-mini-app/dist ./static/twa
 
 # Expose port
 EXPOSE 8200
