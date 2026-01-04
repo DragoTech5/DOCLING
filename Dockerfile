@@ -49,6 +49,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt && \
     pip install --no-cache-dir --index-url https://download.pytorch.org/whl/cpu torch==2.9.0 && \
+    pip install --no-cache-dir sentence-transformers>=5.0.0 transformers>=4.40.0 && \
     apt-get remove -y --purge \
     build-essential \
     python3-dev \

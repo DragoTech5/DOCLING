@@ -26,11 +26,8 @@ sshtunnel==0.4.0
 # Vector Database
 weaviate-client==4.18.1
 
-# Document Processing & Embeddings (CRITICAL for RAG)
-docling>=2.57.0
-docling-core>=2.52.0
-sentence-transformers>=5.0.0
-transformers>=4.40.0
+# Embeddings (CRITICAL for RAG - sentence-transformers will be installed via pip in Dockerfile)
+# sentence-transformers and transformers installed separately to avoid timeout
 
 # Task Scheduling (CRITICAL for background jobs)
 APScheduler>=3.10.0
