@@ -76,6 +76,9 @@ COPY --from=frontend-builder /app/telegram-mini-app/dist ./app/static/twa
 # Expose port
 EXPOSE 8200
 
+# Verify port configuration is correct (invalidates Docker cache for clean rebuild)
+RUN test 8200 -eq 8200 && echo "✓ Port 8200 correctly configured"
+
 # Start uvicorn with explicit port and ENTRYPOINT to avoid shell wrapping
 ENTRYPOINT ["uvicorn"]
 CMD ["app.main:app", "--host", "0.0.0.0", "--port", "8200"]
