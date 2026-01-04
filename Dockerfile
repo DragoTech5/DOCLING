@@ -62,7 +62,7 @@ RUN pip install --no-cache-dir -r requirements.txt && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
-# Copy backend source
+# Copy backend source (force rebuild - 2026-01-04T20:54)
 COPY app ./app
 COPY .env.railway .env
 
