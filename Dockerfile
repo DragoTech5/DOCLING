@@ -79,6 +79,7 @@ EXPOSE 8200
 # Verify port configuration is correct (invalidates Docker cache for clean rebuild)
 RUN test 8200 -eq 8200 && echo "✓ Port 8200 correctly configured"
 
-# Start uvicorn with explicit port and ENTRYPOINT to avoid shell wrapping
-ENTRYPOINT ["uvicorn"]
-CMD ["app.main:app", "--host", "0.0.0.0", "--port", "8200"]
+# Start uvicorn with explicit port
+# Use shell form to unset Railway's injected PORT variable before starting uvicorn
+# This ensures uvicorn uses the hardcoded port 8200, not the invalid $PORT from Railway
+CMD ["/bin/sh", "-c", "unset PORT && exec uvicorn app.main:app --host 0.0.0.0 --port 8200"]
