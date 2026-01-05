@@ -17,6 +17,15 @@ pandas==2.3.3
 numpy==2.2.6
 # torch installed separately via CPU-only index in Dockerfile to reduce image size
 
+# Document Processing (CRITICAL for scheduler_service and docling_processor)
+docling>=2.57.0
+docling-core>=2.52.0
+
+# Embeddings & ML (CRITICAL for sentence_transformers, embeddings.py, and scheduler)
+# Note: sentence-transformers and transformers also installed in Dockerfile as fallback
+sentence-transformers>=5.0.0
+transformers>=4.40.0
+
 # Database
 asyncpg==0.30.0
 aiosqlite==0.22.1
@@ -25,12 +34,16 @@ sshtunnel==0.4.0
 
 # Vector Database
 weaviate-client==4.18.1
+chromadb==1.3.5
 
 # Embeddings (CRITICAL for RAG - sentence-transformers will be installed via pip in Dockerfile)
 # sentence-transformers and transformers installed separately to avoid timeout
 
 # Task Scheduling (CRITICAL for background jobs)
 APScheduler>=3.10.0
+
+# YouTube/Media Processing (CRITICAL for scheduler and video features)
+yt-dlp>=2024.11.18
 
 # Authentication & Payments
 supabase==2.15.3
