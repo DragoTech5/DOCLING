@@ -69,6 +69,7 @@ RUN pip install --no-cache-dir -r requirements.txt && \
 # Copy backend source (force rebuild - 2026-01-04T22:50)
 COPY app ./app
 COPY .env.railway .env
+COPY start.py ./start.py
 
 # Copy built frontend from stage 1
 COPY --from=frontend-builder /app/telegram-mini-app/dist ./static/twa
@@ -79,7 +80,7 @@ EXPOSE 8200
 # Verify port configuration is correct (invalidates Docker cache for clean rebuild)
 RUN test 8200 -eq 8200 && echo "✓ Port 8200 correctly configured"
 
-# Start uvicorn with explicit port
-# Use shell form to unset Railway's injected PORT variable before starting uvicorn
-# This ensures uvicorn uses the hardcoded port 8200, not the invalid $PORT from Railway
-CMD ["/bin/sh", "-c", "unset PORT && exec uvicorn app.main:app --host 0.0.0.0 --port 8200"]
+# Start application using Python startup script
+# The script removes PORT from environment before importing uvicorn
+# This is the earliest possible point to remove the variable
+CMD ["python3", "start.py"]
