@@ -11,6 +11,9 @@ import sys
 if "PORT" in os.environ:
     del os.environ["PORT"]
 
+# CRITICAL: Remove any --port arguments that Railway might inject
+sys.argv = [arg for arg in sys.argv if not arg.startswith("--port")]
+
 # Now safe to import and run uvicorn
 import uvicorn
 
