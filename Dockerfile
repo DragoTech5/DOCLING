@@ -80,7 +80,6 @@ EXPOSE 8200
 # Verify port configuration is correct (invalidates Docker cache for clean rebuild)
 RUN test 8200 -eq 8200 && echo "✓ Port 8200 correctly configured"
 
-# Start application using Python startup script
-# The script removes PORT from environment before importing uvicorn
-# This is the earliest possible point to remove the variable
-CMD ["python3", "start.py"]
+# Start application with uvicorn directly
+# Simple approach: just run uvicorn on hardcoded port 8200
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8200"]
