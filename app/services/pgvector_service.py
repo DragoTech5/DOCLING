@@ -117,9 +117,16 @@ async def get_pool() -> asyncpg.Pool:
             logger.info("SSH tunnel enabled for magick_knowledge database")
             tunnel = get_magick_tunnel()
             if not tunnel.is_active():
-                tunnel.start()
-            host, port = tunnel.local_bind_host, tunnel.local_bind_port
-            logger.info(f"Using SSH tunnel: {host}:{port} -> {cfg.host}:{cfg.port}")
+                try:
+                    tunnel.start()
+                    host, port = tunnel.local_bind_host, tunnel.local_bind_port
+                    logger.info(f"Using SSH tunnel: {host}:{port} -> {cfg.host}:{cfg.port}")
+                except Exception as e:
+                    logger.warning(f"SSH tunnel failed, falling back to direct connection: {e}")
+                    host, port = cfg.host, cfg.port
+                    logger.info(f"Fallback direct connection to {host}:{port}")
+            else:
+                host, port = tunnel.local_bind_host, tunnel.local_bind_port
         else:
             host, port = cfg.host, cfg.port
             logger.info(f"Direct connection to {host}:{port}")
@@ -153,10 +160,19 @@ async def get_bibliothek_pool() -> asyncpg.Pool:
             logger.info("SSH tunnel enabled for bibliothek_knowledge database")
             tunnel = get_bibliothek_tunnel()
             if not tunnel.is_active():
-                tunnel.start()
-            host = tunnel.local_bind_host
-            port = tunnel.local_bind_port
-            logger.info(f"Using SSH tunnel: {host}:{port} -> 127.0.0.1:5432")
+                try:
+                    tunnel.start()
+                    host = tunnel.local_bind_host
+                    port = tunnel.local_bind_port
+                    logger.info(f"Using SSH tunnel: {host}:{port} -> 127.0.0.1:5432")
+                except Exception as e:
+                    logger.warning(f"SSH tunnel failed, falling back to direct connection: {e}")
+                    host = os.getenv("BIBLIOTHEK_HOST", "localhost")
+                    port = int(os.getenv("BIBLIOTHEK_PORT", "5432"))
+                    logger.info(f"Fallback direct connection to {host}:{port}")
+            else:
+                host = tunnel.local_bind_host
+                port = tunnel.local_bind_port
         else:
             host = os.getenv("BIBLIOTHEK_HOST", "localhost")
             port = int(os.getenv("BIBLIOTHEK_PORT", "5432"))
