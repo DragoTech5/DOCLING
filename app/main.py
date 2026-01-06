@@ -130,9 +130,9 @@ if BCOVERS_DIR.exists():
         app.mount("/covers/bibliothek", StaticFiles(directory=BCOVERS_DIR / "BiBLIOTHEK-LIBRARY"), name="covers_bibliothek")
 
 # Mount Telegram Mini App (built frontend)
-# Dockerfile copies frontend dist to /app/static/twa
+# Use STATIC_DIR from config, fallback to /app/static/twa for Docker
 import pathlib
-TWA_DIST_DIR = pathlib.Path("/app") / "static" / "twa"
+TWA_DIST_DIR = STATIC_DIR / "twa" if (STATIC_DIR / "twa").exists() else pathlib.Path("/app") / "static" / "twa"
 if TWA_DIST_DIR.exists():
     # Mount assets directory for JS/CSS files
     app.mount("/twa/assets", StaticFiles(directory=TWA_DIST_DIR / "assets"), name="twa_assets")
