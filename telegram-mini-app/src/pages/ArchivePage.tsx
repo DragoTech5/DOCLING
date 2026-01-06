@@ -103,6 +103,9 @@ export default function ArchivePage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [expandedCover, setExpandedCover] = useState<Document | null>(null)
+  const [downloadLoading, setDownloadLoading] = useState(false)
+  const [downloadError, setDownloadError] = useState<string | null>(null)
+  const [chatLoading, setChatLoading] = useState(false)
 
   // Items per page - 30 items (10 per column × 3 columns)
   const ITEMS_PER_PAGE = 30
@@ -226,6 +229,114 @@ export default function ArchivePage() {
   // Close cover modal
   const closeCoverModal = () => {
     setExpandedCover(null)
+    setDownloadError(null)
+  }
+
+  // Handle PDF download
+  const handleDownloadPDF = async () => {
+    if (!expandedCover) return
+
+    setDownloadLoading(true)
+    setDownloadError(null)
+
+    try {
+      // Format document ID with collection prefix
+      const documentId = `${expandedCover.collection}:${expandedCover.id}`
+
+      const response = await fetch(`/api/telegram/download/${documentId}`, {
+        method: 'GET',
+        headers: {
+          'X-Telegram-Init-Data': window.Telegram?.WebApp?.initData || '',
+        },
+      })
+
+      if (!response.ok) {
+        if (response.status === 429) {
+          setDownloadError('Download quota exhausted. Upgrade your plan for more downloads.')
+        } else if (response.status === 404) {
+          setDownloadError('PDF file not found on server.')
+        } else if (response.status === 401) {
+          setDownloadError('Authentication failed. Please re-authenticate.')
+        } else {
+          const errorData = await response.json().catch(() => ({}))
+          setDownloadError(errorData.detail || 'Download failed. Please try again.')
+        }
+        return
+      }
+
+      // Get the filename from Content-Disposition header or use document title
+      const contentDisposition = response.headers.get('content-disposition')
+      const filename = contentDisposition
+        ? contentDisposition.split('filename=')[1]?.replace(/['"]/g, '') || `${expandedCover.title}.pdf`
+        : `${expandedCover.title}.pdf`
+
+      // Create blob and trigger download
+      const blob = await response.blob()
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = filename
+      document.body.appendChild(a)
+      a.click()
+      window.URL.revokeObjectURL(url)
+      document.body.removeChild(a)
+
+      // Show success message
+      window.Telegram?.WebApp?.showAlert(`✅ Downloaded: ${filename}`)
+      window.Telegram?.WebApp?.HapticFeedback?.notificationOccurred('success')
+
+      closeCoverModal()
+    } catch (err) {
+      const errorMsg = err instanceof Error ? err.message : 'Download failed'
+      setDownloadError(errorMsg)
+      window.Telegram?.WebApp?.HapticFeedback?.notificationOccurred('error')
+    } finally {
+      setDownloadLoading(false)
+    }
+  }
+
+  // Handle chat with this book
+  const handleChatWithBook = async () => {
+    if (!expandedCover) return
+
+    setChatLoading(true)
+
+    try {
+      // Create conversation with single document
+      const response = await fetch('/api/telegram/conversations/create', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Telegram-Init-Data': window.Telegram?.WebApp?.initData || '',
+        },
+        body: JSON.stringify({
+          pdf_ids: [parseInt(expandedCover.id)], // Backend expects numeric IDs
+        }),
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        window.Telegram?.WebApp?.showAlert(
+          errorData.detail || 'Failed to create conversation. Please try again.'
+        )
+        window.Telegram?.WebApp?.HapticFeedback?.notificationOccurred('error')
+        return
+      }
+
+      const conversation = await response.json()
+
+      // Navigate to chat with the new conversation
+      navigate(`/chat?conversationId=${conversation.id}`)
+      window.Telegram?.WebApp?.HapticFeedback?.notificationOccurred('success')
+
+      closeCoverModal()
+    } catch (err) {
+      const errorMsg = err instanceof Error ? err.message : 'Failed to create conversation'
+      window.Telegram?.WebApp?.showAlert(errorMsg)
+      window.Telegram?.WebApp?.HapticFeedback?.notificationOccurred('error')
+    } finally {
+      setChatLoading(false)
+    }
   }
 
   // Get placeholder cover based on collection
@@ -477,24 +588,71 @@ export default function ArchivePage() {
                 <span>{expandedCover.chunk_count.toLocaleString()} chunks</span>
               </div>
 
-              {/* Action buttons - Only show if multi-doc selection is enabled */}
-              {ENABLE_MULTI_DOCUMENT_SELECTION && (
-                <div className="flex gap-2 mt-4">
-                  <button
-                    onClick={() => {
-                      toggleSelection(expandedCover.id)
-                      closeCoverModal()
-                    }}
-                    className={`flex-1 py-2 rounded-lg text-sm font-medium transition-colors ${
-                      selectedDocs.has(expandedCover.id)
-                        ? 'bg-red-500/20 text-red-400 hover:bg-red-500/30'
-                        : 'bg-cyan-500/20 text-cyan-400 hover:bg-cyan-500/30'
-                    }`}
-                  >
-                    {selectedDocs.has(expandedCover.id) ? 'Remove from Selection' : 'Add to Selection'}
-                  </button>
+              {/* Download error message */}
+              {downloadError && (
+                <div className="mb-3 p-3 bg-red-500/10 border border-red-500/30 rounded-lg">
+                  <p className="text-xs text-red-400">{downloadError}</p>
                 </div>
               )}
+
+              {/* Action buttons */}
+              <div className="flex gap-2 mt-4">
+                {/* Download PDF Button */}
+                <button
+                  onClick={handleDownloadPDF}
+                  disabled={downloadLoading || chatLoading}
+                  className={`flex-1 py-2 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2 ${
+                    downloadLoading || chatLoading
+                      ? 'bg-gray-500/20 text-gray-400 cursor-not-allowed'
+                      : 'bg-green-500/20 text-green-400 hover:bg-green-500/30 active:bg-green-500/40'
+                  }`}
+                >
+                  {downloadLoading ? (
+                    <>
+                      <svg className="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" fill="none" opacity="0.3" />
+                        <path strokeLinecap="round" d="M12 2a10 10 0 0 1 0 20" strokeWidth="2" />
+                      </svg>
+                      Downloading...
+                    </>
+                  ) : (
+                    <>
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                      </svg>
+                      Download PDF
+                    </>
+                  )}
+                </button>
+
+                {/* Chat with This Book Button */}
+                <button
+                  onClick={handleChatWithBook}
+                  disabled={downloadLoading || chatLoading}
+                  className={`flex-1 py-2 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2 ${
+                    downloadLoading || chatLoading
+                      ? 'bg-gray-500/20 text-gray-400 cursor-not-allowed'
+                      : 'bg-cyan-500/20 text-cyan-400 hover:bg-cyan-500/30 active:bg-cyan-500/40'
+                  }`}
+                >
+                  {chatLoading ? (
+                    <>
+                      <svg className="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" fill="none" opacity="0.3" />
+                        <path strokeLinecap="round" d="M12 2a10 10 0 0 1 0 20" strokeWidth="2" />
+                      </svg>
+                      Starting...
+                    </>
+                  ) : (
+                    <>
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                      </svg>
+                      Chat with This Book
+                    </>
+                  )}
+                </button>
+              </div>
             </div>
           </div>
         </div>
