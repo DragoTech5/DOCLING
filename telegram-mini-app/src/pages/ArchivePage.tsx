@@ -247,7 +247,28 @@ export default function ArchivePage() {
         },
       })
 
+      // Handle non-OK responses with specific error messages
       if (!response.ok) {
+        let errorMessage = 'Download failed. Please try again.'
+
+        if (response.status === 401) {
+          errorMessage = 'Authentication failed. Please log in again.'
+        } else if (response.status === 429) {
+          errorMessage = 'Download limit reached today. Upgrade your plan for more downloads.'
+        } else if (response.status === 404) {
+          errorMessage = 'PDF file not found on server. Contact support if this persists.'
+        } else if (response.status === 500) {
+          errorMessage = 'Server error. Please try again later.'
+        }
+
+        try {
+          window.Telegram?.WebApp?.showAlert(errorMessage)
+          window.Telegram?.WebApp?.HapticFeedback?.notificationOccurred('error')
+        } catch (telegramErr) {
+          console.error(`Download error (${response.status}): ${errorMessage}`)
+          alert(errorMessage)
+        }
+
         setDownloadLoading(false)
         return
       }
@@ -260,14 +281,27 @@ export default function ArchivePage() {
 
       // Create blob and trigger download
       const blob = await response.blob()
+
+      // Validate blob was received
+      if (!blob || blob.size === 0) {
+        throw new Error('Empty response from server')
+      }
+
       const url = window.URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
       a.download = filename
       document.body.appendChild(a)
+
+      // Trigger download and wait a moment before cleanup
       a.click()
-      window.URL.revokeObjectURL(url)
-      document.body.removeChild(a)
+
+      // Delay URL revocation to ensure browser has started the download
+      // Most browsers start downloads within 100ms of the click
+      setTimeout(() => {
+        window.URL.revokeObjectURL(url)
+        document.body.removeChild(a)
+      }, 200)
 
       // Show success message (safely handle Telegram API availability)
       try {
@@ -280,10 +314,13 @@ export default function ArchivePage() {
 
       closeCoverModal()
     } catch (err) {
+      const errorMsg = err instanceof Error ? err.message : 'Download error'
       try {
+        window.Telegram?.WebApp?.showAlert(`❌ ${errorMsg}`)
         window.Telegram?.WebApp?.HapticFeedback?.notificationOccurred('error')
       } catch (telegramErr) {
-        // Telegram Web App API not available, ignore
+        console.error('Download error:', errorMsg)
+        alert(`Download failed: ${errorMsg}`)
       }
     } finally {
       setDownloadLoading(false)
