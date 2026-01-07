@@ -104,7 +104,6 @@ export default function ArchivePage() {
   const [error, setError] = useState<string | null>(null)
   const [expandedCover, setExpandedCover] = useState<Document | null>(null)
   const [downloadLoading, setDownloadLoading] = useState(false)
-  const [downloadError, setDownloadError] = useState<string | null>(null)
   const [chatLoading, setChatLoading] = useState(false)
 
   // Items per page - 30 items (10 per column × 3 columns)
@@ -229,7 +228,6 @@ export default function ArchivePage() {
   // Close cover modal
   const closeCoverModal = () => {
     setExpandedCover(null)
-    setDownloadError(null)
   }
 
   // Handle PDF download
@@ -237,7 +235,6 @@ export default function ArchivePage() {
     if (!expandedCover) return
 
     setDownloadLoading(true)
-    setDownloadError(null)
 
     try {
       // Document ID is already formatted from API (e.g., "maglib:2513")
@@ -251,16 +248,7 @@ export default function ArchivePage() {
       })
 
       if (!response.ok) {
-        if (response.status === 429) {
-          setDownloadError('Download quota exhausted. Upgrade your plan for more downloads.')
-        } else if (response.status === 404) {
-          setDownloadError('PDF file not found on server.')
-        } else if (response.status === 401) {
-          setDownloadError('Authentication failed. Please re-authenticate.')
-        } else {
-          const errorData = await response.json().catch(() => ({}))
-          setDownloadError(errorData.detail || 'Download failed. Please try again.')
-        }
+        setDownloadLoading(false)
         return
       }
 
@@ -292,8 +280,6 @@ export default function ArchivePage() {
 
       closeCoverModal()
     } catch (err) {
-      const errorMsg = err instanceof Error ? err.message : 'Download failed'
-      setDownloadError(errorMsg)
       try {
         window.Telegram?.WebApp?.HapticFeedback?.notificationOccurred('error')
       } catch (telegramErr) {
@@ -547,18 +533,13 @@ export default function ArchivePage() {
               </svg>
             </button>
 
-            {/* Cover Image - reduced by 1.5x for better layout */}
-            <div className={`aspect-[2/3] max-w-64 mx-auto ${getPlaceholderStyle(expandedCover.collection)}`}>
-              <CoverImage doc={expandedCover} size="large" />
-            </div>
-
             {/* Document Info - with bottom padding to account for nav bar */}
             <div className="p-4 pb-24">
               <h3 className="text-lg font-semibold text-gray-100 mb-1">
                 {expandedCover.title}
               </h3>
               {expandedCover.author && (
-                <p className="text-sm text-gray-400 mb-2">
+                <p className="text-sm text-gray-400 mb-3">
                   by {expandedCover.author}
                 </p>
               )}
@@ -598,27 +579,20 @@ export default function ArchivePage() {
                 </div>
               )}
 
-              <div className="flex items-center gap-3 text-xs text-gray-500">
-                <span className={`px-2 py-0.5 rounded ${
-                  expandedCover.collection === 'maglib'
-                    ? 'bg-purple-500/20 text-purple-400'
-                    : 'bg-blue-500/20 text-blue-400'
-                }`}>
-                  {expandedCover.collection === 'maglib' ? 'MAG-LIB' : 'BIBLIOTHEK'}
-                </span>
+              {/* Pages count only */}
+              <div className="text-xs text-gray-500 mb-4">
                 <span>{expandedCover.page_count} pages</span>
-                <span>{expandedCover.chunk_count.toLocaleString()} chunks</span>
               </div>
 
-              {/* Download error message */}
-              {downloadError && (
-                <div className="mb-3 p-3 bg-red-500/10 border border-red-500/30 rounded-lg">
-                  <p className="text-xs text-red-400">{downloadError}</p>
+              {/* Thumbnail and Action buttons in horizontal layout */}
+              <div className="flex items-center justify-center gap-6 mb-4">
+                {/* Cover Image - increased by 36% */}
+                <div className={`aspect-[2/3] max-w-96 ${getPlaceholderStyle(expandedCover.collection)}`}>
+                  <CoverImage doc={expandedCover} size="large" />
                 </div>
-              )}
 
-              {/* Action buttons */}
-              <div className="flex gap-2 mt-4">
+                {/* Action buttons vertical stack */}
+                <div className="flex flex-col gap-2 flex-shrink-0">
                 {/* Download PDF Button */}
                 <button
                   onClick={handleDownloadPDF}
@@ -678,6 +652,7 @@ export default function ArchivePage() {
             </div>
           </div>
         </div>
+      </div>
       )}
 
       <BottomNav />
