@@ -303,14 +303,18 @@ export default function ArchivePage() {
 
     try {
       // Create conversation with single document
-      const response = await fetch('/api/telegram/conversations/create', {
+      // Note: expandedCover.id is in format "maglib:123" or "bibliothek:123"
+      // We need to extract just the numeric part for the backend
+      const numericId = parseInt(expandedCover.id.split(':')[1] || expandedCover.id)
+
+      const response = await fetch('/api/telegram/conversations', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'X-Telegram-Init-Data': window.Telegram?.WebApp?.initData || '',
         },
         body: JSON.stringify({
-          pdf_ids: [parseInt(expandedCover.id)], // Backend expects numeric IDs
+          pdf_ids: [numericId], // Backend expects numeric IDs only
         }),
       })
 
