@@ -1153,6 +1153,20 @@ async def stream_chat_message(
             telegram_user_id=user.db_record["id"],
             pdf_ids=pdf_ids_int,
         )
+    elif not pdf_ids_int:
+        # CRITICAL FIX: For follow-up messages, load the conversation's stored pdf_ids
+        # This ensures document filtering is preserved across the conversation
+        conversation_record = await tg_repo.get_tg_conversation(conversation_id)
+        if conversation_record and conversation_record.get("pdf_ids"):
+            try:
+                pdf_ids_int = json.loads(conversation_record["pdf_ids"])
+                # Rebuild pdf_collections - for stored IDs we default to maglib
+                # The merged stream logic will handle cross-collection queries
+                for doc_id in pdf_ids_int:
+                    pdf_collections[doc_id] = 'maglib'
+                logger.info(f"[ENDPOINT] Loaded conversation pdf_ids from storage: {pdf_ids_int}")
+            except json.JSONDecodeError:
+                logger.warning(f"[ENDPOINT] Failed to parse stored pdf_ids for conversation {conversation_id}")
 
     # Deduct query credit
     success = await tg_repo.deduct_query_credit(user.id)
