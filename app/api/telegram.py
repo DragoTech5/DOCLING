@@ -754,7 +754,16 @@ async def download_pdf(
             success=False,
             error_type="quota_exhausted"
         )
-        raise HTTPException(status_code=429, detail="Download quota exhausted. Upgrade your plan for more downloads.")
+        # Return detailed error with tier info for frontend to display appropriately
+        error_detail = {
+            "code": "download_quota_exhausted",
+            "tier": user_tier,
+            "message": f"You've exhausted your daily download limit on the {user_tier.capitalize()} plan"
+        }
+        raise HTTPException(
+            status_code=429,
+            detail=json.dumps(error_detail)
+        )
 
     # Determine collection from document_id prefix
     if document_id.startswith("maglib:"):

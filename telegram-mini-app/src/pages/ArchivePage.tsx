@@ -252,11 +252,26 @@ export default function ArchivePage() {
       // Handle non-OK responses with specific error messages
       if (!headResponse.ok) {
         let errorMessage = 'Download failed. Please try again.'
+        let showUpgradeOption = false
 
         if (headResponse.status === 401) {
           errorMessage = 'Authentication failed. Please log in again.'
         } else if (headResponse.status === 429) {
-          errorMessage = 'Download limit reached today. Upgrade your plan for more downloads.'
+          // Parse detailed error from backend
+          try {
+            const errorData = await headResponse.json()
+            if (errorData.detail && typeof errorData.detail === 'string') {
+              const errorDetail = JSON.parse(errorData.detail)
+              if (errorDetail.code === 'download_quota_exhausted') {
+                const tierName = errorDetail.tier.charAt(0).toUpperCase() + errorDetail.tier.slice(1)
+                errorMessage = `⏰ Daily download limit reached!\n\nYou've used all ${tierName} plan downloads for today.\n\nUpgrade to a higher plan for more downloads.`
+                showUpgradeOption = true
+              }
+            }
+          } catch (e) {
+            errorMessage = '⏰ Daily download limit reached. Upgrade your plan for more downloads.'
+            showUpgradeOption = true
+          }
         } else if (headResponse.status === 404) {
           errorMessage = 'PDF file not found on server. Contact support if this persists.'
         } else if (headResponse.status === 500) {
@@ -264,8 +279,30 @@ export default function ArchivePage() {
         }
 
         try {
-          window.Telegram?.WebApp?.showAlert(errorMessage)
-          window.Telegram?.WebApp?.HapticFeedback?.notificationOccurred('error')
+          if (showUpgradeOption && window.Telegram?.WebApp?.showPopup) {
+            // Show popup with upgrade button (if supported in user's Telegram version)
+            window.Telegram.WebApp.showPopup(
+              {
+                title: '📚 Download Limit Reached',
+                message: errorMessage,
+                buttons: [
+                  { id: 'upgrade', type: 'default', text: '📈 View Plans' },
+                  { id: 'cancel', type: 'cancel', text: 'Cancel' }
+                ]
+              },
+              (buttonId) => {
+                if (buttonId === 'upgrade') {
+                  // Navigate to pricing page
+                  window.location.hash = '#/plans'
+                }
+              }
+            )
+            window.Telegram.WebApp.HapticFeedback?.notificationOccurred('warning')
+          } else {
+            // Fallback to simple alert
+            window.Telegram?.WebApp?.showAlert(errorMessage)
+            window.Telegram?.WebApp?.HapticFeedback?.notificationOccurred('error')
+          }
         } catch (telegramErr) {
           console.error(`Download error (${headResponse.status}): ${errorMessage}`)
           alert(errorMessage)
