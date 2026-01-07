@@ -95,6 +95,7 @@ interface TelegramWebApp {
   setHeaderColor: (color: string) => void
   setBackgroundColor: (color: string) => void
   isVersionAtLeast: (version: string) => boolean
+  openLink: (url: string, options?: { try_instant_view?: boolean }) => void
   platform: string
   version: string
 }

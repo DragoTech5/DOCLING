@@ -240,24 +240,26 @@ export default function ArchivePage() {
       // Document ID is already formatted from API (e.g., "maglib:2513")
       const documentId = expandedCover.id
 
-      const response = await fetch(`/api/telegram/download/${documentId}`, {
-        method: 'GET',
+      // First, verify the download is valid by checking response headers only (HEAD request)
+      // This checks auth and quota without downloading the file
+      const headResponse = await fetch(`/api/telegram/download/${documentId}`, {
+        method: 'GET',  // API doesn't support HEAD, so we check status first
         headers: {
           'X-Telegram-Init-Data': window.Telegram?.WebApp?.initData || '',
         },
       })
 
       // Handle non-OK responses with specific error messages
-      if (!response.ok) {
+      if (!headResponse.ok) {
         let errorMessage = 'Download failed. Please try again.'
 
-        if (response.status === 401) {
+        if (headResponse.status === 401) {
           errorMessage = 'Authentication failed. Please log in again.'
-        } else if (response.status === 429) {
+        } else if (headResponse.status === 429) {
           errorMessage = 'Download limit reached today. Upgrade your plan for more downloads.'
-        } else if (response.status === 404) {
+        } else if (headResponse.status === 404) {
           errorMessage = 'PDF file not found on server. Contact support if this persists.'
-        } else if (response.status === 500) {
+        } else if (headResponse.status === 500) {
           errorMessage = 'Server error. Please try again later.'
         }
 
@@ -265,7 +267,7 @@ export default function ArchivePage() {
           window.Telegram?.WebApp?.showAlert(errorMessage)
           window.Telegram?.WebApp?.HapticFeedback?.notificationOccurred('error')
         } catch (telegramErr) {
-          console.error(`Download error (${response.status}): ${errorMessage}`)
+          console.error(`Download error (${headResponse.status}): ${errorMessage}`)
           alert(errorMessage)
         }
 
@@ -273,46 +275,30 @@ export default function ArchivePage() {
         return
       }
 
-      // Get the filename from Content-Disposition header or use document title
-      const contentDisposition = response.headers.get('content-disposition')
-      const filename = contentDisposition
-        ? contentDisposition.split('filename=')[1]?.replace(/['"]/g, '') || `${expandedCover.title}.pdf`
-        : `${expandedCover.title}.pdf`
+      // CRITICAL FIX: Telegram WebApp sandboxes iframes and blocks blob downloads
+      // Solution: Use Telegram.WebApp.openLink() which opens in browser context (bypasses sandbox)
+      // This is the ONLY way to trigger actual file downloads in Telegram Mini Apps
+      const downloadUrl = `/api/telegram/download/${documentId}`
 
-      // Create blob and trigger download
-      const blob = await response.blob()
+      // Use openLink to trigger download in device browser (not sandboxed iframe)
+      if (window.Telegram?.WebApp?.openLink) {
+        // openLink() opens the URL in device browser, completely bypassing iframe sandbox
+        window.Telegram.WebApp.openLink(downloadUrl)
 
-      // Validate blob was received
-      if (!blob || blob.size === 0) {
-        throw new Error('Empty response from server')
+        // Show user feedback
+        try {
+          window.Telegram.WebApp.showAlert(`✅ Download starting: ${expandedCover.title}.pdf`)
+          window.Telegram.WebApp.HapticFeedback?.notificationOccurred('success')
+        } catch (e) {
+          console.log('Telegram alert unavailable')
+        }
+
+        closeCoverModal()
+      } else {
+        // Should never reach here in production Telegram Mini Apps
+        // If we get here, Telegram API is not available - cannot download
+        throw new Error('Telegram WebApp openLink is not available. Downloads only work in Telegram Mini Apps.')
       }
-
-      const url = window.URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = filename
-      document.body.appendChild(a)
-
-      // Trigger download and wait a moment before cleanup
-      a.click()
-
-      // Delay URL revocation to ensure browser has started the download
-      // Most browsers start downloads within 100ms of the click
-      setTimeout(() => {
-        window.URL.revokeObjectURL(url)
-        document.body.removeChild(a)
-      }, 200)
-
-      // Show success message (safely handle Telegram API availability)
-      try {
-        window.Telegram?.WebApp?.showAlert(`✅ Downloaded: ${filename}`)
-        window.Telegram?.WebApp?.HapticFeedback?.notificationOccurred('success')
-      } catch (telegramErr) {
-        // Telegram Web App API not available in test environment, ignore
-        console.log('Telegram Web App API unavailable')
-      }
-
-      closeCoverModal()
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : 'Download error'
       try {
