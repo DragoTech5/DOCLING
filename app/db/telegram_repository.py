@@ -581,7 +581,7 @@ async def get_tg_conversation(
 async def create_tg_conversation(
     telegram_user_id: int,
     title: str = "New Chat",
-    pdf_ids: list[int] | None = None,
+    pdf_ids: list[str | int] | None = None,
 ) -> int:
     """Create a new Telegram conversation."""
     async with aiosqlite.connect(get_db_path()) as db:
@@ -597,7 +597,7 @@ async def create_tg_conversation(
 async def update_tg_conversation(
     conversation_id: int,
     title: str | None = None,
-    pdf_ids: list[int] | None = None,
+    pdf_ids: list[str | int] | None = None,
 ) -> bool:
     """Update a Telegram conversation."""
     updates = []

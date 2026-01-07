@@ -88,7 +88,7 @@ class AuthResponse(BaseModel):
 
 class CreateConversationRequest(BaseModel):
     """Request to create a new conversation."""
-    pdf_ids: list[int] = Field(default_factory=list, description="PDF/category IDs to chat with")
+    pdf_ids: list[str] = Field(default_factory=list, description="PDF/category IDs to chat with (format: 'maglib:123' or 'bibliothek:456')")
 
 
 class SendMessageRequest(BaseModel):

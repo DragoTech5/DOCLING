@@ -313,8 +313,7 @@ export default function ArchivePage() {
     try {
       // Create conversation with single document
       // Note: expandedCover.id is in format "maglib:123" or "bibliothek:123"
-      // We need to extract just the numeric part for the backend
-      const numericId = parseInt(expandedCover.id.split(':')[1] || expandedCover.id)
+      // Backend needs the full ID with collection prefix to determine which database to search
 
       const response = await fetch('/api/telegram/conversations', {
         method: 'POST',
@@ -323,7 +322,7 @@ export default function ArchivePage() {
           'X-Telegram-Init-Data': window.Telegram?.WebApp?.initData || '',
         },
         body: JSON.stringify({
-          pdf_ids: [numericId], // Backend expects numeric IDs only
+          pdf_ids: [expandedCover.id], // Send full ID with collection prefix (e.g., "maglib:123")
         }),
       })
 
