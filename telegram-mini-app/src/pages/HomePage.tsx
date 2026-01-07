@@ -1,5 +1,6 @@
 import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '@/stores/authStore'
+import { TIER_LIMITS } from '@/types'
 import BottomNav from '@/components/BottomNav'
 import SavedConversationsCard from '@/components/SavedConversationsCard'
 import MysticalTeaserCard from '@/components/MysticalTeaserCard'
@@ -9,13 +10,20 @@ export default function HomePage() {
   const navigate = useNavigate()
   const { profile, telegramUser } = useAuthStore()
 
-  // Get tier display info
+  // Get tier display info from TIER_LIMITS
   const getTierInfo = () => {
-    const tier = profile?.tier
-    if (tier === 'starter') return { name: 'Starter', dailyQueries: 33, selections: 6 }
-    if (tier === 'pro') return { name: 'Pro', dailyQueries: 66, selections: 15 }
-    if (tier === 'unlimited' || tier === 'enterprise') return { name: 'Unlimited', dailyQueries: '∞', selections: '∞' }
-    return { name: 'Free', dailyQueries: 3, selections: 1 }
+    const tier = profile?.tier || 'free'
+    const tierInfo = TIER_LIMITS[tier as keyof typeof TIER_LIMITS]
+
+    const displayName = tier === 'free' ? 'Free'
+      : tier === 'starter' ? 'Starter'
+      : tier === 'pro' ? 'Pro'
+      : 'Unlimited'
+
+    const dailyQueries = tierInfo.dailyQueries === null ? '∞' : tierInfo.dailyQueries
+    const selections = tierInfo.maxPdfs === null ? '∞' : tierInfo.maxPdfs
+
+    return { name: displayName, dailyQueries, selections }
   }
 
   const tierInfo = getTierInfo()
