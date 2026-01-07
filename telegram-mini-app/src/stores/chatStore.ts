@@ -223,11 +223,17 @@ export const useChatStore = create<ChatState>((set, get) => ({
     // If mixed, default to maglib (backend will handle document_ids filtering)
     const collection = collections.size === 1 ? Array.from(collections)[0] : 'maglib'
 
+    // For single-document conversations (from "Chat with This Book"), use the conversation's pdfIds
+    // Otherwise use the global selectedPdfIds for multi-document searches
+    const messagePdfIds = currentConversation?.pdfIds && currentConversation.pdfIds.length > 0
+      ? currentConversation.pdfIds
+      : selectedPdfIds
+
     await api.streamMessage(
       {
         conversationId: realConversationId,
         message: content.trim(),
-        pdfIds: selectedPdfIds,
+        pdfIds: messagePdfIds,
         collection,
       },
       // On chunk
