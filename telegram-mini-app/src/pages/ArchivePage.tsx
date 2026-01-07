@@ -343,8 +343,9 @@ export default function ArchivePage() {
 
       const conversation = await response.json()
 
-      // Navigate to chat with the new conversation
-      navigate(`/chat?conversationId=${conversation.id}`)
+      // Navigate to chat with the new conversation AND the specific document
+      // This ensures the URL parameter is set so ChatPage properly filters to just this document
+      navigate(`/chat?conversationId=${conversation.id}&docs=${expandedCover.id}`)
       try {
         window.Telegram?.WebApp?.HapticFeedback?.notificationOccurred('success')
       } catch (telegramErr) {
