@@ -240,8 +240,8 @@ export default function ArchivePage() {
     setDownloadError(null)
 
     try {
-      // Format document ID with collection prefix
-      const documentId = `${expandedCover.collection}:${expandedCover.id}`
+      // Document ID is already formatted from API (e.g., "maglib:2513")
+      const documentId = expandedCover.id
 
       const response = await fetch(`/api/telegram/download/${documentId}`, {
         method: 'GET',
@@ -281,15 +281,24 @@ export default function ArchivePage() {
       window.URL.revokeObjectURL(url)
       document.body.removeChild(a)
 
-      // Show success message
-      window.Telegram?.WebApp?.showAlert(`✅ Downloaded: ${filename}`)
-      window.Telegram?.WebApp?.HapticFeedback?.notificationOccurred('success')
+      // Show success message (safely handle Telegram API availability)
+      try {
+        window.Telegram?.WebApp?.showAlert(`✅ Downloaded: ${filename}`)
+        window.Telegram?.WebApp?.HapticFeedback?.notificationOccurred('success')
+      } catch (telegramErr) {
+        // Telegram Web App API not available in test environment, ignore
+        console.log('Telegram Web App API unavailable')
+      }
 
       closeCoverModal()
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : 'Download failed'
       setDownloadError(errorMsg)
-      window.Telegram?.WebApp?.HapticFeedback?.notificationOccurred('error')
+      try {
+        window.Telegram?.WebApp?.HapticFeedback?.notificationOccurred('error')
+      } catch (telegramErr) {
+        // Telegram Web App API not available, ignore
+      }
     } finally {
       setDownloadLoading(false)
     }
@@ -320,10 +329,15 @@ export default function ArchivePage() {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}))
-        window.Telegram?.WebApp?.showAlert(
-          errorData.detail || 'Failed to create conversation. Please try again.'
-        )
-        window.Telegram?.WebApp?.HapticFeedback?.notificationOccurred('error')
+        try {
+          window.Telegram?.WebApp?.showAlert(
+            errorData.detail || 'Failed to create conversation. Please try again.'
+          )
+          window.Telegram?.WebApp?.HapticFeedback?.notificationOccurred('error')
+        } catch (telegramErr) {
+          // Telegram Web App API not available, show in console
+          console.error('Failed to create conversation:', errorData.detail)
+        }
         return
       }
 
@@ -331,7 +345,11 @@ export default function ArchivePage() {
 
       // Navigate to chat with the new conversation
       navigate(`/chat?conversationId=${conversation.id}`)
-      window.Telegram?.WebApp?.HapticFeedback?.notificationOccurred('success')
+      try {
+        window.Telegram?.WebApp?.HapticFeedback?.notificationOccurred('success')
+      } catch (telegramErr) {
+        // Telegram Web App API not available, ignore
+      }
 
       closeCoverModal()
     } catch (err) {
