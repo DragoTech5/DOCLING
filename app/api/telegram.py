@@ -95,7 +95,7 @@ class SendMessageRequest(BaseModel):
     """Request to send a chat message."""
     conversationId: Optional[str] = None  # String from frontend, converted to int
     message: str = Field(..., min_length=1, max_length=10000)
-    pdfIds: list[str] = Field(default_factory=list)  # String IDs from frontend
+    pdfIds: Optional[list[str]] = None  # String IDs from frontend (None = not provided, [] = archive chat)
     collection: str = Field(default="maglib", pattern="^(maglib|bibliothek|all)$")  # Which collection to search
 
 
@@ -1156,9 +1156,11 @@ async def stream_chat_message(
             pdf_ids=pdf_ids_int,
         )
         logger.info(f"[STREAM] Created new conversation {conversation_id} with pdf_ids: {pdf_ids_int}")
-    elif not pdf_ids_int:
-        # CRITICAL FIX: For follow-up messages, load the conversation's stored pdf_ids
-        # This ensures document filtering is preserved across the conversation
+    elif request.pdfIds is None:
+        # CRITICAL FIX: For follow-up messages where pdfIds not provided, load conversation's stored pdf_ids
+        # This preserves document filtering (e.g., single-book chat) across the conversation
+        # pdfIds=None means "not provided in request" vs pdfIds=[] which means "archive chat"
+        logger.info(f"[ENDPOINT] pdfIds not provided for follow-up message, loading from conversation {conversation_id}")
         conversation_record = await tg_repo.get_tg_conversation(conversation_id)
         if conversation_record and conversation_record.get("pdf_ids"):
             try:
