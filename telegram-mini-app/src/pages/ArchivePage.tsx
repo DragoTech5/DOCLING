@@ -534,7 +534,7 @@ export default function ArchivePage() {
           onClick={closeCoverModal}
         >
           <div
-            className="relative max-w-sm w-full bg-dark-100 rounded-xl overflow-hidden shadow-2xl"
+            className="relative max-w-sm w-full bg-dark-100 rounded-xl overflow-y-auto shadow-2xl max-h-[calc(100vh-120px)] flex flex-col"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Close button */}
@@ -552,8 +552,8 @@ export default function ArchivePage() {
               <CoverImage doc={expandedCover} size="large" />
             </div>
 
-            {/* Document Info */}
-            <div className="p-4">
+            {/* Document Info - with bottom padding to account for nav bar */}
+            <div className="p-4 pb-24">
               <h3 className="text-lg font-semibold text-gray-100 mb-1">
                 {expandedCover.title}
               </h3>

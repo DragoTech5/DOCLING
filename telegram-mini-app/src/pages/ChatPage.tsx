@@ -1075,6 +1075,7 @@ export default function ChatPage() {
                   chatWithAll={chatWithAll}
                   isExpanded={isDocumentsExpanded}
                   onToggleExpand={() => setIsDocumentsExpanded(!isDocumentsExpanded)}
+                  chatCompact={true}
                 />
               )}
             </>

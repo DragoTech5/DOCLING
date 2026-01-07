@@ -14,6 +14,7 @@ interface SelectedDocumentsDisplayProps {
   chatWithAll?: boolean
   isExpanded?: boolean
   onToggleExpand?: () => void
+  chatCompact?: boolean // Compact horizontal layout for chat page
 }
 
 export function SelectedDocumentsDisplay({
@@ -21,12 +22,53 @@ export function SelectedDocumentsDisplay({
   chatWithAll = false,
   isExpanded = false,
   onToggleExpand,
+  chatCompact = false,
 }: SelectedDocumentsDisplayProps) {
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null)
 
   // Don't show if no documents
   if (documents.length === 0 && !chatWithAll) {
     return null
+  }
+
+  // Chat compact mode - single horizontal row with thumbnails and minimal info
+  if (chatCompact) {
+    return (
+      <div className="flex items-center gap-3 py-2 overflow-x-auto pb-2">
+        {documents.map((doc, idx) => (
+          <div key={doc.id} className="flex flex-col items-center gap-1 flex-shrink-0">
+            {/* Compact thumbnail */}
+            <div className="relative w-12 h-16 rounded-sm overflow-hidden border border-tg-button/40 shadow-md">
+              {/* Fallback gradient background */}
+              <div className="absolute inset-0 bg-gradient-to-br from-tg-button/10 to-tg-button/5 flex items-center justify-center">
+                <span className="text-[10px] font-serif font-bold text-tg-button">
+                  {idx + 1}
+                </span>
+              </div>
+              {/* Cover image */}
+              {doc.cover && (
+                <img
+                  src={doc.cover}
+                  alt={doc.title}
+                  className="w-full h-full object-cover relative z-10"
+                  onError={(e) => {
+                    e.currentTarget.style.display = 'none'
+                  }}
+                />
+              )}
+              {/* Index badge */}
+              <div className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-tg-button text-dark text-[10px] font-serif font-bold flex items-center justify-center shadow-lg">
+                {idx + 1}
+              </div>
+            </div>
+            {/* Compact title */}
+            <p className="text-[10px] font-serif text-tg-text text-center line-clamp-1 w-14">
+              {doc.title.substring(0, 20)}
+            </p>
+          </div>
+        ))}
+      </div>
+    )
   }
 
   // Compact view - show count and toggle button
