@@ -229,6 +229,14 @@ export const useChatStore = create<ChatState>((set, get) => ({
       ? currentConversation.pdfIds
       : selectedPdfIds
 
+    console.log('📤 sendMessage debug:', {
+      currentConversation_id: currentConversation?.id,
+      currentConversation_pdfIds: currentConversation?.pdfIds,
+      selectedPdfIds,
+      messagePdfIds,
+      collection,
+    })
+
     await api.streamMessage(
       {
         conversationId: realConversationId,

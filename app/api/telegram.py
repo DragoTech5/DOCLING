@@ -1208,8 +1208,6 @@ async def stream_chat_message(
     # Route to appropriate collection based on request
     # - maglib: 534k chunks from 6,377 MAGICK PDFs
     # - bibliothek: 1.8M chunks from 2,701 BIBLIOTHEK PDFs
-    import logging
-    logger = logging.getLogger(__name__)
     logger.info(f"Telegram chat: collection={request.collection}, pdf_ids={pdf_ids_int}")
 
     async def generate():

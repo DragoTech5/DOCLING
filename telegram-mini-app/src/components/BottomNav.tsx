@@ -56,7 +56,9 @@ export default function BottomNav() {
 
   const handleNavClick = (path: string) => {
     hapticFeedback('selection')
-    navigate(path)
+    // Preserve query parameters when navigating (e.g., ?docs=maglib:123)
+    // This ensures single-document chat mode is maintained when switching tabs
+    navigate(path + location.search)
   }
 
   return (
