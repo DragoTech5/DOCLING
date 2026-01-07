@@ -10,6 +10,7 @@ from datetime import datetime
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.interval import IntervalTrigger
+from apscheduler.triggers.cron import CronTrigger
 
 from app.config import config
 from app.db import repository
@@ -170,6 +171,46 @@ async def check_channel_for_new_videos(channel_id: int) -> None:
         logger.error(f"Error checking channel {channel_id}: {e}")
 
 
+async def reset_daily_queries() -> None:
+    """
+    Reset daily query quotas for all users at UTC midnight.
+
+    This job runs every day at 00:00 UTC and resets queries_remaining
+    to the daily limit for each user's subscription tier.
+    """
+    try:
+        import aiosqlite
+        from app.db.models import TIER_LIMITS, get_db_path
+
+        logger.info("Starting daily query quota reset...")
+
+        async with aiosqlite.connect(get_db_path()) as db:
+            # Get all active users
+            cursor = await db.execute(
+                "SELECT id, telegram_id, tier FROM telegram_users WHERE tier != 'enterprise'"
+            )
+            users = await cursor.fetchall()
+
+            reset_count = 0
+            for user_id, telegram_id, tier in users:
+                tier_limits = TIER_LIMITS.get(tier, TIER_LIMITS["free"])
+                daily_limit = tier_limits.get("daily_queries")
+
+                # Only reset if tier has defined daily limits (not unlimited)
+                if daily_limit is not None:
+                    await db.execute(
+                        "UPDATE telegram_users SET queries_remaining = ? WHERE id = ?",
+                        (daily_limit, user_id)
+                    )
+                    reset_count += 1
+
+            await db.commit()
+            logger.info(f"Daily query reset complete: {reset_count} users updated")
+
+    except Exception as e:
+        logger.error(f"Error resetting daily queries: {e}")
+
+
 async def check_all_channels() -> None:
     """Check all active monitored channels for new videos."""
     if not config.scheduler.enabled:
@@ -197,6 +238,15 @@ def start_scheduler() -> None:
 
     scheduler = get_scheduler()
 
+    # Add daily query reset job (runs at 00:00 UTC every day)
+    scheduler.add_job(
+        reset_daily_queries,
+        trigger=CronTrigger(hour=0, minute=0, timezone="UTC"),
+        id="reset_daily_queries",
+        name="Reset daily query quotas",
+        replace_existing=True,
+    )
+
     # Add the channel check job
     scheduler.add_job(
         check_all_channels,
@@ -208,7 +258,8 @@ def start_scheduler() -> None:
 
     scheduler.start()
     logger.info(
-        f"Scheduler started - checking channels every {config.scheduler.check_interval_hours} hours"
+        f"Scheduler started - reset_daily_queries at 00:00 UTC, "
+        f"checking channels every {config.scheduler.check_interval_hours} hours"
     )
 
 

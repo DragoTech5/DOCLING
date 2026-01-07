@@ -5,6 +5,7 @@ export interface TierLimits {
   tier: SubscriptionTier
   maxPdfs: number | null // null = unlimited (document selections)
   dailyQueries: number | null // null = unlimited
+  maxDownloads: number | null // null = unlimited (daily PDF downloads)
   maxCollections: number | null // null = unlimited
   historyDays: number | null // null = unlimited
   priceStars: number // in Telegram Stars
@@ -12,14 +13,14 @@ export interface TierLimits {
 }
 
 export const TIER_LIMITS: Record<SubscriptionTier, TierLimits> = {
-  free: { tier: 'free', maxPdfs: 1, dailyQueries: 3, maxCollections: 0, historyDays: 30, priceStars: 0, priceUsd: 0 },
-  starter: { tier: 'starter', maxPdfs: null, dailyQueries: 25, maxCollections: null, historyDays: 90, priceStars: 430, priceUsd: 999 },
-  pro: { tier: 'pro', maxPdfs: null, dailyQueries: 60, maxCollections: null, historyDays: 365, priceStars: 860, priceUsd: 1999 },
-  unlimited: { tier: 'unlimited', maxPdfs: null, dailyQueries: null, maxCollections: null, historyDays: null, priceStars: 2298, priceUsd: 4999 },
-  enterprise: { tier: 'enterprise', maxPdfs: null, dailyQueries: null, maxCollections: null, historyDays: null, priceStars: 2298, priceUsd: 4999 },
+  free: { tier: 'free', maxPdfs: 1, dailyQueries: 6, maxDownloads: 1, maxCollections: 0, historyDays: 30, priceStars: 0, priceUsd: 0 },
+  starter: { tier: 'starter', maxPdfs: null, dailyQueries: 25, maxDownloads: 3, maxCollections: null, historyDays: 90, priceStars: 430, priceUsd: 999 },
+  pro: { tier: 'pro', maxPdfs: null, dailyQueries: 60, maxDownloads: 12, maxCollections: null, historyDays: 365, priceStars: 860, priceUsd: 1999 },
+  unlimited: { tier: 'unlimited', maxPdfs: null, dailyQueries: null, maxDownloads: null, maxCollections: null, historyDays: null, priceStars: 2298, priceUsd: 4999 },
+  enterprise: { tier: 'enterprise', maxPdfs: null, dailyQueries: null, maxDownloads: null, maxCollections: null, historyDays: null, priceStars: 2298, priceUsd: 4999 },
   // Legacy aliases for backwards compatibility
-  scholar: { tier: 'starter', maxPdfs: null, dailyQueries: 25, maxCollections: null, historyDays: 90, priceStars: 430, priceUsd: 999 },
-  researcher: { tier: 'pro', maxPdfs: null, dailyQueries: 60, maxCollections: null, historyDays: 365, priceStars: 860, priceUsd: 1999 },
+  scholar: { tier: 'starter', maxPdfs: null, dailyQueries: 25, maxDownloads: 3, maxCollections: null, historyDays: 90, priceStars: 430, priceUsd: 999 },
+  researcher: { tier: 'pro', maxPdfs: null, dailyQueries: 60, maxDownloads: 12, maxCollections: null, historyDays: 365, priceStars: 860, priceUsd: 1999 },
 }
 
 // User types

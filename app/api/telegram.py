@@ -78,10 +78,11 @@ class AuthResponse(BaseModel):
     tier: str
     queriesUsed: int
     queriesRemaining: int
+    dailyQueryLimit: Optional[int] = None  # null = unlimited
     downloadsUsed: int = 0
     downloadsRemaining: int = 1
     downloadQuotaResets: Optional[str] = None
-    dailyDownloadLimit: int = 1
+    dailyDownloadLimit: Optional[int] = 1  # null = unlimited
     subscriptionEndsAt: Optional[str]
     createdAt: str
 
@@ -227,17 +228,21 @@ async def authenticate(user: TelegramUser = Depends(get_current_telegram_user)):
 
 @router.get("/profile", response_model=AuthResponse)
 async def get_profile(user: TelegramUser = Depends(get_current_telegram_user)):
-    """Get current user profile with download quota."""
+    """Get current user profile with query and download quotas."""
     if not user.db_record:
         raise HTTPException(status_code=500, detail="Database error")
 
-    # Get download quota remaining and tier limit
-    downloads_remaining = await tg_repo.get_download_quota_remaining(user.id)
     tier = user.db_record["tier"]
     tier_limits = TIER_LIMITS.get(tier, TIER_LIMITS["free"])
+
+    # Get query limit for tier
+    daily_query_limit = tier_limits.get("daily_queries")  # None = unlimited
+
+    # Get download quota remaining and tier limit
+    downloads_remaining = await tg_repo.get_download_quota_remaining(user.id)
     daily_download_limit = tier_limits.get("daily_downloads", 1)
 
-    # For unlimited tiers, return None for both limits and a high number for remaining
+    # For unlimited tiers, return None for limits and a high number for remaining
     if daily_download_limit is None:
         downloads_remaining_display = 999999  # High number for unlimited
         daily_download_limit_display = None
@@ -252,6 +257,7 @@ async def get_profile(user: TelegramUser = Depends(get_current_telegram_user)):
         "tier": tier,
         "queriesUsed": user.db_record["queries_used"],
         "queriesRemaining": user.db_record["queries_remaining"],
+        "dailyQueryLimit": daily_query_limit,
         "downloadsUsed": user.db_record.get("downloads_used", 0),
         "downloadsRemaining": downloads_remaining_display,
         "downloadQuotaResets": user.db_record.get("download_quota_resets_at"),
