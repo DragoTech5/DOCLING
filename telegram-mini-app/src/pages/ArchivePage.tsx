@@ -547,8 +547,8 @@ export default function ArchivePage() {
               </svg>
             </button>
 
-            {/* Cover Image */}
-            <div className={`aspect-[2/3] ${getPlaceholderStyle(expandedCover.collection)}`}>
+            {/* Cover Image - reduced by 1.5x for better layout */}
+            <div className={`aspect-[2/3] max-w-64 mx-auto ${getPlaceholderStyle(expandedCover.collection)}`}>
               <CoverImage doc={expandedCover} size="large" />
             </div>
 
