@@ -1148,11 +1148,14 @@ async def stream_chat_message(
                 pdf_ids_int.append(int(pid))
                 pdf_collections[int(pid)] = 'maglib'  # Default to maglib
 
+    logger.info(f"[STREAM] Initial pdf_ids_int from request: {pdf_ids_int}")
+
     if not conversation_id:
         conversation_id = await tg_repo.create_tg_conversation(
             telegram_user_id=user.db_record["id"],
             pdf_ids=pdf_ids_int,
         )
+        logger.info(f"[STREAM] Created new conversation {conversation_id} with pdf_ids: {pdf_ids_int}")
     elif not pdf_ids_int:
         # CRITICAL FIX: For follow-up messages, load the conversation's stored pdf_ids
         # This ensures document filtering is preserved across the conversation
@@ -1319,7 +1322,7 @@ async def stream_chat_message(
 
             stream_func = merged_stream()
         elif request.collection == "bibliothek":
-            logger.info(f"[ENDPOINT] Routing to telegram_chat_stream_bibliothek")
+            logger.info(f"[ENDPOINT] Routing to telegram_chat_stream_bibliothek with document_ids={pdf_ids_int if pdf_ids_int else None}")
             stream_func = telegram_chat_stream_bibliothek(
                 conversation_id=conversation_id,
                 user_message=request.message,
@@ -1328,7 +1331,7 @@ async def stream_chat_message(
             )
         else:
             # Default to MAG-LIB (maglib or all)
-            logger.info(f"[ENDPOINT] Routing to telegram_chat_stream_maglib")
+            logger.info(f"[ENDPOINT] Routing to telegram_chat_stream_maglib with document_ids={pdf_ids_int if pdf_ids_int else None}")
             stream_func = telegram_chat_stream_maglib(
                 conversation_id=conversation_id,
                 user_message=request.message,
