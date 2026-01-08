@@ -1223,6 +1223,16 @@ async def telegram_chat_stream_maglib(
             avg_similarity=conf["avg_similarity"],
             reason=conf["reason"],
         )
+        logger.info(
+            f"[STREAM_MAGLIB] Confidence assessment: "
+            f"is_confident={confidence.is_confident}, "
+            f"score={confidence.confidence_score:.3f}, "
+            f"max_sim={confidence.max_similarity:.3f}, "
+            f"avg_sim={confidence.avg_similarity:.3f}, "
+            f"reason={confidence.reason}"
+        )
+    else:
+        logger.info(f"[STREAM_MAGLIB] No confidence info in retrieval_info. Available keys: {list(retrieval_info.keys())}")
 
     # Build messages for OpenAI
     messages = build_messages(
