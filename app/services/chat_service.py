@@ -595,6 +595,12 @@ async def chat(
     # If confidence is low (no relevant information found), clear sources
     # to prevent misleading citations in the response
     if not confidence.is_confident:
+        logger.info(
+            f"Clearing sources due to low confidence - "
+            f"is_confident={confidence.is_confident}, "
+            f"confidence_score={confidence.confidence_score:.2f}, "
+            f"reason={confidence.reason}"
+        )
         sources = []
 
     # Build messages for OpenAI (with confidence-aware system prompt)
@@ -690,6 +696,12 @@ async def chat_stream(
     # If confidence is low (no relevant information found), clear sources
     # to prevent misleading citations in the response
     if not confidence.is_confident:
+        logger.info(
+            f"Clearing sources due to low confidence - "
+            f"is_confident={confidence.is_confident}, "
+            f"confidence_score={confidence.confidence_score:.2f}, "
+            f"reason={confidence.reason}"
+        )
         sources = []
 
     # Build messages for OpenAI (with confidence-aware system prompt)
