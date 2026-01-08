@@ -1577,6 +1577,7 @@ async def delete_saved_conversation(
 @router.post("/share-conversation", response_model=ShareConversationResponse)
 async def share_unsaved_conversation(
     request: ShareConversationRequest,
+    http_request: Request,
     user: TelegramUser = Depends(get_current_telegram_user),
 ):
     """
@@ -1626,9 +1627,14 @@ async def share_unsaved_conversation(
     except Exception as log_err:
         print(f"Analytics error (non-blocking): {log_err}")
 
-    # Get public TWA URL from environment
-    twa_public_url = os.getenv("TWA_PUBLIC_URL", "https://select-signature-lloyd-trails.trycloudflare.com/twa")
-    share_url = f"{twa_public_url}/share/{share_token}"
+    # Get public TWA URL from environment, fallback to current request base URL
+    # Construct from request if not explicitly configured (works on localhost, Railway, etc.)
+    if twa_public_url := os.getenv("TWA_PUBLIC_URL"):
+        share_url = f"{twa_public_url}/share/{share_token}"
+    else:
+        # Use current request's base URL (scheme + host)
+        base_url = f"{http_request.url.scheme}://{http_request.url.netloc}"
+        share_url = f"{base_url}/twa/share/{share_token}"
 
     return {
         "shareToken": share_token,
@@ -1639,6 +1645,7 @@ async def share_unsaved_conversation(
 @router.post("/saved-conversations/{saved_conversation_id}/share", response_model=ShareConversationResponse)
 async def share_conversation(
     saved_conversation_id: str,
+    http_request: Request,
     user: TelegramUser = Depends(get_current_telegram_user),
 ):
     """
@@ -1658,10 +1665,14 @@ async def share_conversation(
     if not share_token:
         raise HTTPException(status_code=404, detail="Saved conversation not found")
 
-    # Get public TWA URL from environment, default to Cloudflare tunnel URL
-    twa_public_url = os.getenv("TWA_PUBLIC_URL", "https://select-signature-lloyd-trails.trycloudflare.com/twa")
-    # Construct absolute share URL
-    share_url = f"{twa_public_url}/share/{share_token}"
+    # Get public TWA URL from environment, fallback to current request base URL
+    # Construct from request if not explicitly configured (works on localhost, Railway, etc.)
+    if twa_public_url := os.getenv("TWA_PUBLIC_URL"):
+        share_url = f"{twa_public_url}/share/{share_token}"
+    else:
+        # Use current request's base URL (scheme + host)
+        base_url = f"{http_request.url.scheme}://{http_request.url.netloc}"
+        share_url = f"{base_url}/twa/share/{share_token}"
 
     return {
         "shareToken": share_token,
