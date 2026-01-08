@@ -391,10 +391,15 @@ async def retrieve_relevant_chunks_with_confidence(
         avg_threshold=config.rag.avg_confidence_threshold,
     )
 
-    if not confidence.is_confident:
-        logger.info(
-            f"Low retrieval confidence for query: '{query[:50]}...' - {confidence.reason}"
-        )
+    # Log all confidence assessments for debugging
+    logger.info(
+        f"Retrieval confidence for query: '{query[:60]}...' - "
+        f"is_confident={confidence.is_confident}, "
+        f"score={confidence.confidence_score:.3f}, "
+        f"max_sim={confidence.max_similarity:.3f}, "
+        f"avg_sim={confidence.avg_similarity:.3f}, "
+        f"reason={confidence.reason}"
+    )
 
     return chunks, confidence
 
@@ -1279,6 +1284,18 @@ async def telegram_chat_stream_maglib(
         # CRITICAL FIX: _extract_cited_sources now returns (cleaned_text, cited_sources) tuple
         full_content, cited_sources = _extract_cited_sources(full_content, all_sources)
 
+        # CRITICAL: Only include sources if retrieval confidence is high
+        # If confidence is low (no relevant information found), clear sources
+        # to prevent misleading citations in the response
+        if confidence and not confidence.is_confident:
+            logger.info(
+                f"[STREAM_MAGLIB] Clearing sources due to low confidence - "
+                f"is_confident={confidence.is_confident}, "
+                f"confidence_score={confidence.confidence_score:.2f}, "
+                f"reason={confidence.reason}"
+            )
+            cited_sources = []
+
         # Log sources for debugging with SOURCE-AWARE NUMBERING
         logger.info(f"[STREAM_MAGLIB] SOURCE-AWARE NUMBERING: {len(all_sources)} chunks from {len(cited_sources)} unique documents")
         for idx, s in enumerate(cited_sources, 1):
@@ -1477,6 +1494,18 @@ async def telegram_chat_stream_bibliothek(
         # Extract only cited sources and deduplicate
         # CRITICAL FIX: _extract_cited_sources now returns (cleaned_text, cited_sources) tuple
         full_response, cited_sources = _extract_cited_sources(full_response, all_sources)
+
+        # CRITICAL: Only include sources if retrieval confidence is high
+        # If confidence is low (no relevant information found), clear sources
+        # to prevent misleading citations in the response
+        if confidence and not confidence.is_confident:
+            logger.info(
+                f"[STREAM_BIBLIOTHEK] Clearing sources due to low confidence - "
+                f"is_confident={confidence.is_confident}, "
+                f"confidence_score={confidence.confidence_score:.2f}, "
+                f"reason={confidence.reason}"
+            )
+            cited_sources = []
 
         # Send only the cited, deduplicated sources
         sources_data = [
