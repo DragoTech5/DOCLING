@@ -727,45 +727,7 @@ async def download_pdf(
     telegram_id = user.id
     user_tier = user.db_record.get("tier", "free")
 
-    # Check download quota
-    remaining = await tg_repo.get_download_quota_remaining(telegram_id)
-    if remaining == -2:
-        # Log failed download - user not found
-        await tg_repo.log_pdf_download(
-            telegram_id=telegram_id,
-            document_id=document_id,
-            document_title="Unknown",
-            collection="unknown",
-            user_tier=user_tier,
-            response_time_ms=int((time.time() - start_time) * 1000),
-            success=False,
-            error_type="user_not_found"
-        )
-        raise HTTPException(status_code=401, detail="User not found")
-    if remaining == 0:
-        # Log failed download - quota exhausted
-        await tg_repo.log_pdf_download(
-            telegram_id=telegram_id,
-            document_id=document_id,
-            document_title="Unknown",
-            collection="unknown",
-            user_tier=user_tier,
-            response_time_ms=int((time.time() - start_time) * 1000),
-            success=False,
-            error_type="quota_exhausted"
-        )
-        # Return detailed error with tier info for frontend to display appropriately
-        error_detail = {
-            "code": "download_quota_exhausted",
-            "tier": user_tier,
-            "message": f"You've exhausted your daily download limit on the {user_tier.capitalize()} plan"
-        }
-        raise HTTPException(
-            status_code=429,
-            detail=json.dumps(error_detail)
-        )
-
-    # Determine collection from document_id prefix
+    # Determine collection from document_id prefix FIRST (needed for error logging)
     if document_id.startswith("maglib:"):
         collection = "maglib"
         doc_id = document_id.replace("maglib:", "")
@@ -788,6 +750,36 @@ async def download_pdf(
         }
     else:
         raise HTTPException(status_code=400, detail="Invalid document ID format")
+
+    # Check download quota (after we know the collection for proper error logging)
+    remaining = await tg_repo.get_download_quota_remaining(telegram_id)
+    if remaining == -2:
+        # Log failed download - user not found
+        await tg_repo.log_pdf_download(
+            telegram_id=telegram_id,
+            document_id=document_id,
+            document_title="Unknown",
+            collection=collection,
+            user_tier=user_tier,
+            response_time_ms=int((time.time() - start_time) * 1000),
+            success=False,
+            error_type="user_not_found"
+        )
+        raise HTTPException(status_code=401, detail="User not found")
+    if remaining == 0:
+        # User has exhausted their daily download quota
+        logger.info(f"[Download] Quota exhausted for user {telegram_id}, tier: {user_tier}, collection: {collection}")
+        # Skip logging the failed download - return error directly
+        # Return detailed error with tier info for frontend to display appropriately
+        error_detail = {
+            "code": "download_quota_exhausted",
+            "tier": user_tier,
+            "message": f"You've exhausted your daily download limit on the {user_tier.capitalize()} plan"
+        }
+        raise HTTPException(
+            status_code=429,
+            detail=json.dumps(error_detail)
+        )
 
     # Query pgvector to get document filename and title
     try:
@@ -870,12 +862,15 @@ async def download_pdf(
     )
 
     # Stream the file
+    # Sanitize filename for headers (remove quotes and special chars)
+    safe_filename = (document_title or "document").replace('"', '').replace("'", '')
+
     return FileResponse(
         path=pdf_path,
         media_type="application/pdf",
-        filename=f"{document_title or 'document'}.pdf",
+        filename=f"{safe_filename}.pdf",
         headers={
-            "Content-Disposition": f'attachment; filename="{document_title or "document"}.pdf"',
+            "Content-Disposition": f'attachment; filename="{safe_filename}.pdf"',
         }
     )
 
