@@ -58,7 +58,7 @@ export interface Source {
   source_type?: string  // e.g., "magick_pdf"
   channel_name?: string  // Author name
   published_date?: string
-  document_id?: string  // For linking to book covers
+  document_id?: string  // For linking to book covers (in format "maglib:123" or "bibliothek:123")
   document_filename?: string  // For cover image lookup (filename without .pdf)
   // Legacy fields for backwards compatibility
   url?: string

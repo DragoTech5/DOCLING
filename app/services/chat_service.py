@@ -625,6 +625,8 @@ async def chat(
             "source_url": s.source_url,
             "channel_name": s.channel_name,
             "published_date": s.published_date,
+            "document_id": s.document_id,
+            "document_filename": s.document_filename,
         }
         for s in sources
     ] if sources else None
@@ -760,6 +762,8 @@ async def chat_stream(
             "source_url": s.source_url,
             "channel_name": s.channel_name,
             "published_date": s.published_date,
+            "document_id": s.document_id,
+            "document_filename": s.document_filename,
         }
         for s in sources
     ] if sources else None
@@ -916,6 +920,8 @@ async def chat_maglib(
             "source_url": s.source_url,
             "channel_name": s.channel_name,
             "published_date": s.published_date,
+            "document_id": s.document_id,
+            "document_filename": s.document_filename,
         }
         for s in sources
     ] if sources else None
@@ -1743,6 +1749,8 @@ async def chat_stream_maglib(
             "source_url": s.source_url,
             "channel_name": s.channel_name,
             "published_date": s.published_date,
+            "document_id": s.document_id,
+            "document_filename": s.document_filename,
         }
         for s in sources
     ] if sources else None

@@ -491,6 +491,8 @@ export default function ChatPage() {
   const [initialized, setInitialized] = useState(false)
   const [chatWithAll, setChatWithAll] = useState(false)
   const [selectedSource, setSelectedSource] = useState<Source | null>(null) // For thumbnail modal
+  const [downloadLoading, setDownloadLoading] = useState(false)
+  const [chatLoading, setChatLoading] = useState(false)
   const [showSaveModal, setShowSaveModal] = useState(false)
   const [saveTitle, setSaveTitle] = useState('')
   const [isSavingConversation, setIsSavingConversation] = useState(false)
@@ -659,6 +661,188 @@ export default function ChatPage() {
       setShareError('Failed to share conversation')
     } finally {
       setIsSharing(false)
+    }
+  }
+
+  // Handle downloading source document
+  const handleDownloadSourceDocument = async () => {
+    if (!selectedSource?.document_id) return
+
+    setDownloadLoading(true)
+
+    try {
+      const documentId = selectedSource.document_id
+
+      // Check if download is valid by making a test request
+      const headResponse = await fetch(`/api/telegram/download/${documentId}`, {
+        method: 'GET',
+        headers: {
+          'X-Telegram-Init-Data': window.Telegram?.WebApp?.initData || '',
+        },
+      })
+
+      // Handle non-OK responses with specific error messages
+      if (!headResponse.ok) {
+        let errorMessage = 'Download failed. Please try again.'
+        let showUpgradeOption = false
+
+        if (headResponse.status === 401) {
+          errorMessage = 'Authentication failed. Please log in again.'
+        } else if (headResponse.status === 429) {
+          // Parse detailed error from backend
+          try {
+            const errorData = await headResponse.json()
+            if (errorData.detail && typeof errorData.detail === 'string') {
+              const errorDetail = JSON.parse(errorData.detail)
+              if (errorDetail.code === 'download_quota_exhausted') {
+                const tierName = errorDetail.tier.charAt(0).toUpperCase() + errorDetail.tier.slice(1)
+                errorMessage = `⏰ Daily download limit reached!\n\nYou've used all ${tierName} plan downloads for today.\n\nUpgrade to a higher plan for more downloads.`
+                showUpgradeOption = true
+              }
+            }
+          } catch (e) {
+            errorMessage = '⏰ Daily download limit reached. Upgrade your plan for more downloads.'
+            showUpgradeOption = true
+          }
+        } else if (headResponse.status === 404) {
+          errorMessage = 'PDF file not found on server. Contact support if this persists.'
+        } else if (headResponse.status === 500) {
+          errorMessage = 'Server error. Please try again later.'
+        }
+
+        // Try to show via Telegram popup (best UX with buttons)
+        let telegramAPIFailed = false
+
+        if (showUpgradeOption && window.Telegram?.WebApp?.showPopup) {
+          try {
+            window.Telegram.WebApp.showPopup(
+              {
+                title: '📚 Download Limit Reached',
+                message: errorMessage,
+                buttons: [
+                  { id: 'upgrade', type: 'default', text: '📈 View Plans' },
+                  { id: 'cancel', type: 'cancel', text: 'Cancel' }
+                ]
+              },
+              (buttonId) => {
+                if (buttonId === 'upgrade') {
+                  window.location.hash = '#/plans'
+                }
+              }
+            )
+            try {
+              window.Telegram.WebApp.HapticFeedback?.notificationOccurred('warning')
+            } catch (e) {
+              // Haptic not supported, ignore
+            }
+          } catch (e) {
+            console.warn('showPopup failed:', e)
+            telegramAPIFailed = true
+          }
+        } else {
+          telegramAPIFailed = true
+        }
+
+        // Fallback to Telegram alert if popup failed
+        if (telegramAPIFailed && window.Telegram?.WebApp?.showAlert) {
+          try {
+            window.Telegram.WebApp.showAlert(errorMessage)
+            try {
+              window.Telegram.WebApp.HapticFeedback?.notificationOccurred('error')
+            } catch (e) {
+              // Haptic not supported, ignore
+            }
+          } catch (e) {
+            console.warn('showAlert failed:', e)
+            alert(errorMessage)
+          }
+        }
+
+        setDownloadLoading(false)
+        return
+      }
+
+      // Use Telegram.WebApp.openLink() to trigger download in device browser
+      const downloadUrl = `/api/telegram/download/${documentId}`
+
+      if (window.Telegram?.WebApp?.openLink) {
+        window.Telegram.WebApp.openLink(downloadUrl)
+
+        // Show user feedback
+        try {
+          window.Telegram.WebApp.showAlert(`✅ Download starting: ${selectedSource.title}.pdf`)
+          window.Telegram.WebApp.HapticFeedback?.notificationOccurred('success')
+        } catch (e) {
+          console.log('Telegram alert unavailable')
+        }
+
+        setSelectedSource(null)
+      } else {
+        throw new Error('Telegram WebApp openLink is not available. Downloads only work in Telegram Mini Apps.')
+      }
+    } catch (err) {
+      const errorMsg = err instanceof Error ? err.message : 'Download error'
+      try {
+        window.Telegram?.WebApp?.showAlert(`❌ ${errorMsg}`)
+        window.Telegram?.WebApp?.HapticFeedback?.notificationOccurred('error')
+      } catch (telegramErr) {
+        console.error('Download error:', errorMsg)
+        alert(`Download failed: ${errorMsg}`)
+      }
+    } finally {
+      setDownloadLoading(false)
+    }
+  }
+
+  // Handle chat with source document
+  const handleChatWithSourceDocument = async () => {
+    if (!selectedSource?.document_id) return
+
+    setChatLoading(true)
+
+    try {
+      const response = await fetch('/api/telegram/conversations', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Telegram-Init-Data': window.Telegram?.WebApp?.initData || '',
+        },
+        body: JSON.stringify({
+          pdf_ids: [selectedSource.document_id],
+        }),
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        try {
+          window.Telegram?.WebApp?.showAlert(
+            errorData.detail || 'Failed to create conversation. Please try again.'
+          )
+          window.Telegram?.WebApp?.HapticFeedback?.notificationOccurred('error')
+        } catch (telegramErr) {
+          console.error('Failed to create conversation:', errorData.detail)
+        }
+        return
+      }
+
+      const data = await response.json()
+      const conversation = data.conversation || data
+
+      hapticFeedback('success')
+      navigate(`/chat?conversationId=${conversation.id}&docs=${selectedSource.document_id}`)
+
+      setSelectedSource(null)
+    } catch (err) {
+      const errorMsg = err instanceof Error ? err.message : 'Failed to create conversation'
+      try {
+        window.Telegram?.WebApp?.showAlert(errorMsg)
+        window.Telegram?.WebApp?.HapticFeedback?.notificationOccurred('error')
+      } catch (telegramErr) {
+        console.error('Chat error:', errorMsg)
+        alert(`Failed to create chat: ${errorMsg}`)
+      }
+    } finally {
+      setChatLoading(false)
     }
   }
 
@@ -1310,9 +1494,124 @@ export default function ChatPage() {
               {selectedSource.title}
             </h3>
             {selectedSource.channel_name && (
-              <p style={{ color: '#9ca3af', margin: 0, fontSize: '14px' }}>
+              <p style={{ color: '#9ca3af', margin: '0 0 16px 0', fontSize: '14px' }}>
                 by {selectedSource.channel_name}
               </p>
+            )}
+
+            {/* Action Buttons */}
+            {selectedSource.document_id && (
+              <div style={{ display: 'flex', gap: '8px', marginTop: '16px' }}>
+                {/* Download PDF Button */}
+                <button
+                  onClick={handleDownloadSourceDocument}
+                  disabled={downloadLoading || chatLoading}
+                  style={{
+                    flex: 1,
+                    padding: '10px 12px',
+                    borderRadius: '8px',
+                    fontSize: '13px',
+                    fontWeight: '500',
+                    border: 'none',
+                    cursor: downloadLoading || chatLoading ? 'not-allowed' : 'pointer',
+                    backgroundColor: downloadLoading || chatLoading ? 'rgba(107, 114, 128, 0.2)' : 'rgba(34, 197, 94, 0.2)',
+                    color: downloadLoading || chatLoading ? '#9ca3af' : '#86efac',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '6px',
+                    transition: 'all 0.2s',
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!downloadLoading && !chatLoading) {
+                      (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'rgba(34, 197, 94, 0.3)'
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!downloadLoading && !chatLoading) {
+                      (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'rgba(34, 197, 94, 0.2)'
+                    }
+                  }}
+                >
+                  {downloadLoading ? (
+                    <>
+                      <svg
+                        className="animate-spin"
+                        style={{ width: '14px', height: '14px' }}
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" fill="none" opacity="0.3" />
+                        <path strokeLinecap="round" d="M12 2a10 10 0 0 1 10 10" strokeWidth="2" />
+                      </svg>
+                      <span>Downloading...</span>
+                    </>
+                  ) : (
+                    <>
+                      <svg style={{ width: '14px', height: '14px' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                      </svg>
+                      <span>Download</span>
+                    </>
+                  )}
+                </button>
+
+                {/* Chat with This Book Button */}
+                <button
+                  onClick={handleChatWithSourceDocument}
+                  disabled={downloadLoading || chatLoading}
+                  style={{
+                    flex: 1,
+                    padding: '10px 12px',
+                    borderRadius: '8px',
+                    fontSize: '13px',
+                    fontWeight: '500',
+                    border: 'none',
+                    cursor: downloadLoading || chatLoading ? 'not-allowed' : 'pointer',
+                    backgroundColor: downloadLoading || chatLoading ? 'rgba(107, 114, 128, 0.2)' : 'rgba(6, 182, 212, 0.2)',
+                    color: downloadLoading || chatLoading ? '#9ca3af' : '#06B6D4',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '6px',
+                    transition: 'all 0.2s',
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!downloadLoading && !chatLoading) {
+                      (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'rgba(6, 182, 212, 0.3)'
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!downloadLoading && !chatLoading) {
+                      (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'rgba(6, 182, 212, 0.2)'
+                    }
+                  }}
+                >
+                  {chatLoading ? (
+                    <>
+                      <svg
+                        className="animate-spin"
+                        style={{ width: '14px', height: '14px' }}
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" fill="none" opacity="0.3" />
+                        <path strokeLinecap="round" d="M12 2a10 10 0 0 1 0 20" strokeWidth="2" />
+                      </svg>
+                      <span>Starting...</span>
+                    </>
+                  ) : (
+                    <>
+                      <svg style={{ width: '14px', height: '14px' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                      </svg>
+                      <span>Chat</span>
+                    </>
+                  )}
+                </button>
+              </div>
             )}
           </div>
         </div>,
