@@ -256,10 +256,22 @@ def start_scheduler() -> None:
         replace_existing=True,
     )
 
+    # Add monthly affiliate payout job (runs on 1st of month at 00:00 UTC)
+    from app.services.affiliate_payout_service import process_monthly_affiliate_payouts
+
+    scheduler.add_job(
+        process_monthly_affiliate_payouts,
+        trigger=CronTrigger(day=1, hour=0, minute=0, timezone="UTC"),
+        id="monthly_affiliate_payouts",
+        name="Process monthly affiliate payouts",
+        replace_existing=True,
+    )
+
     scheduler.start()
     logger.info(
         f"Scheduler started - reset_daily_queries at 00:00 UTC, "
-        f"checking channels every {config.scheduler.check_interval_hours} hours"
+        f"checking channels every {config.scheduler.check_interval_hours} hours, "
+        f"monthly affiliate payouts on 1st of month at 00:00 UTC"
     )
 
 

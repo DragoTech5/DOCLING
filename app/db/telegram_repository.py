@@ -1037,3 +1037,405 @@ async def get_dodo_payment_by_session(checkout_session_id: str) -> dict | None:
         )
         row = await cursor.fetchone()
         return dict(row) if row else None
+
+
+# ============================================================================
+# AFFILIATE SYSTEM FUNCTIONS
+# ============================================================================
+
+
+async def create_affiliate_channel_from_forward(
+    telegram_user_id: int,
+    channel_id: int,
+    channel_username: str | None,
+    channel_title: str,
+) -> int:
+    """Create a new affiliate channel registration from forwarded message metadata."""
+    async with aiosqlite.connect(get_db_path()) as db:
+        await db.execute(
+            """
+            INSERT INTO affiliate_channels
+            (telegram_user_id, channel_id, channel_username, channel_title, status)
+            VALUES (?, ?, ?, ?, 'pending_info')
+            """,
+            (telegram_user_id, channel_id, channel_username, channel_title),
+        )
+        await db.commit()
+
+        # Get the inserted ID
+        cursor = await db.execute(
+            "SELECT id FROM affiliate_channels WHERE channel_id = ? AND telegram_user_id = ?",
+            (channel_id, telegram_user_id),
+        )
+        row = await cursor.fetchone()
+        return row[0] if row else -1
+
+
+async def update_affiliate_channel_info(
+    affiliate_channel_id: int,
+    subscriber_count: int,
+    last_post_date: str,
+) -> bool:
+    """Update affiliate channel with subscriber info and move to pending_review status."""
+    async with aiosqlite.connect(get_db_path()) as db:
+        await db.execute(
+            """
+            UPDATE affiliate_channels
+            SET subscriber_count = ?, last_post_date = ?, status = 'pending_review',
+                updated_at = datetime('now')
+            WHERE id = ?
+            """,
+            (subscriber_count, last_post_date, affiliate_channel_id),
+        )
+        await db.commit()
+        return True
+
+
+async def get_affiliate_channel_by_user(telegram_user_id: int) -> dict | None:
+    """Get affiliate channel record for a telegram user."""
+    async with aiosqlite.connect(get_db_path()) as db:
+        db.row_factory = aiosqlite.Row
+        cursor = await db.execute(
+            "SELECT * FROM affiliate_channels WHERE telegram_user_id = ?",
+            (telegram_user_id,),
+        )
+        row = await cursor.fetchone()
+        return dict(row) if row else None
+
+
+async def get_affiliate_channel_by_referral_code(referral_code: str) -> dict | None:
+    """Get affiliate channel by referral code."""
+    async with aiosqlite.connect(get_db_path()) as db:
+        db.row_factory = aiosqlite.Row
+        cursor = await db.execute(
+            "SELECT * FROM affiliate_channels WHERE referral_code = ?",
+            (referral_code,),
+        )
+        row = await cursor.fetchone()
+        return dict(row) if row else None
+
+
+async def get_pending_affiliate_channels() -> list[dict]:
+    """Get all pending affiliate applications for admin review."""
+    async with aiosqlite.connect(get_db_path()) as db:
+        db.row_factory = aiosqlite.Row
+        cursor = await db.execute(
+            "SELECT * FROM affiliate_channels WHERE status = 'pending_review' ORDER BY created_at ASC"
+        )
+        rows = await cursor.fetchall()
+        return [dict(row) for row in rows]
+
+
+async def approve_affiliate_channel(
+    affiliate_channel_id: int,
+    admin_telegram_id: int,
+    referral_code: str,
+) -> bool:
+    """Approve an affiliate channel and generate referral code."""
+    async with aiosqlite.connect(get_db_path()) as db:
+        await db.execute(
+            """
+            UPDATE affiliate_channels
+            SET status = 'approved', referral_code = ?, reviewed_by_telegram_id = ?,
+                reviewed_at = datetime('now'), updated_at = datetime('now')
+            WHERE id = ?
+            """,
+            (referral_code, admin_telegram_id, affiliate_channel_id),
+        )
+        await db.commit()
+        return True
+
+
+async def reject_affiliate_channel(
+    affiliate_channel_id: int,
+    admin_telegram_id: int,
+    reason: str,
+) -> bool:
+    """Reject an affiliate channel application."""
+    async with aiosqlite.connect(get_db_path()) as db:
+        await db.execute(
+            """
+            UPDATE affiliate_channels
+            SET status = 'rejected', review_notes = ?, reviewed_by_telegram_id = ?,
+                reviewed_at = datetime('now'), updated_at = datetime('now')
+            WHERE id = ?
+            """,
+            (reason, admin_telegram_id, affiliate_channel_id),
+        )
+        await db.commit()
+        return True
+
+
+async def create_referral(
+    affiliate_channel_id: int,
+    referred_user_id: int,
+    referral_code: str,
+) -> int:
+    """Create a referral record when user signs up with referral code."""
+    async with aiosqlite.connect(get_db_path()) as db:
+        await db.execute(
+            """
+            INSERT INTO affiliate_referrals
+            (affiliate_channel_id, referred_user_id, referral_code_used)
+            VALUES (?, ?, ?)
+            """,
+            (affiliate_channel_id, referred_user_id, referral_code),
+        )
+        await db.commit()
+
+        cursor = await db.execute(
+            "SELECT id FROM affiliate_referrals WHERE referred_user_id = ? AND affiliate_channel_id = ?",
+            (referred_user_id, affiliate_channel_id),
+        )
+        row = await cursor.fetchone()
+        return row[0] if row else -1
+
+
+async def get_referral_by_user(referred_user_id: int) -> dict | None:
+    """Get referral record for a user (if they were referred)."""
+    async with aiosqlite.connect(get_db_path()) as db:
+        db.row_factory = aiosqlite.Row
+        cursor = await db.execute(
+            "SELECT * FROM affiliate_referrals WHERE referred_user_id = ?",
+            (referred_user_id,),
+        )
+        row = await cursor.fetchone()
+        return dict(row) if row else None
+
+
+async def mark_referral_converted(referral_id: int) -> bool:
+    """Mark referral as converted (user made first purchase)."""
+    async with aiosqlite.connect(get_db_path()) as db:
+        await db.execute(
+            """
+            UPDATE affiliate_referrals
+            SET has_converted = 1, first_purchase_at = datetime('now')
+            WHERE id = ?
+            """,
+            (referral_id,),
+        )
+        await db.commit()
+        return True
+
+
+async def create_commission(
+    affiliate_channel_id: int,
+    referral_id: int,
+    payment_id: int,
+    tier: str,
+    sale_amount_stars: int,
+    commission_amount_stars: int,
+) -> int:
+    """Create a commission record for a subscription sale."""
+    async with aiosqlite.connect(get_db_path()) as db:
+        await db.execute(
+            """
+            INSERT INTO affiliate_commissions
+            (affiliate_channel_id, referral_id, payment_id, tier, sale_amount_stars, commission_amount_stars)
+            VALUES (?, ?, ?, ?, ?, ?)
+            """,
+            (affiliate_channel_id, referral_id, payment_id, tier, sale_amount_stars, commission_amount_stars),
+        )
+        await db.commit()
+
+        cursor = await db.execute(
+            "SELECT id FROM affiliate_commissions WHERE referral_id = ? AND payment_id = ?",
+            (referral_id, payment_id),
+        )
+        row = await cursor.fetchone()
+        return row[0] if row else -1
+
+
+async def add_to_affiliate_balance(
+    affiliate_channel_id: int,
+    amount_stars: int,
+) -> bool:
+    """Add commission to affiliate's pending balance."""
+    async with aiosqlite.connect(get_db_path()) as db:
+        await db.execute(
+            """
+            UPDATE affiliate_channels
+            SET pending_balance_stars = pending_balance_stars + ?,
+                total_earnings_stars = total_earnings_stars + ?,
+                updated_at = datetime('now')
+            WHERE id = ?
+            """,
+            (amount_stars, amount_stars, affiliate_channel_id),
+        )
+        await db.commit()
+        return True
+
+
+async def get_affiliate_dashboard_data(affiliate_channel_id: int) -> dict:
+    """Get dashboard data for an affiliate (stats and earning info)."""
+    async with aiosqlite.connect(get_db_path()) as db:
+        db.row_factory = aiosqlite.Row
+
+        # Get channel info
+        cursor = await db.execute(
+            "SELECT * FROM affiliate_channels WHERE id = ?",
+            (affiliate_channel_id,),
+        )
+        channel = dict(await cursor.fetchone())
+
+        # Get conversion rate
+        total_referrals = channel["total_referrals"]
+        total_conversions = channel["total_conversions"]
+        conversion_rate = (total_conversions / total_referrals * 100) if total_referrals > 0 else 0
+
+        return {
+            "id": affiliate_channel_id,
+            "total_referrals": total_referrals,
+            "total_conversions": total_conversions,
+            "conversion_rate": round(conversion_rate, 1),
+            "total_earnings_stars": channel["total_earnings_stars"],
+            "pending_balance_stars": channel["pending_balance_stars"],
+            "channel_title": channel["channel_title"],
+            "referral_code": channel["referral_code"],
+        }
+
+
+async def get_pending_commissions_for_affiliate(affiliate_channel_id: int) -> list[dict]:
+    """Get all pending (unpaid) commissions for an affiliate."""
+    async with aiosqlite.connect(get_db_path()) as db:
+        db.row_factory = aiosqlite.Row
+        cursor = await db.execute(
+            """
+            SELECT * FROM affiliate_commissions
+            WHERE affiliate_channel_id = ? AND status = 'pending'
+            ORDER BY created_at ASC
+            """,
+            (affiliate_channel_id,),
+        )
+        rows = await cursor.fetchall()
+        return [dict(row) for row in rows]
+
+
+async def get_affiliates_for_payout(min_balance_stars: int = 2000) -> list[dict]:
+    """Get all affiliates with pending balance >= minimum threshold."""
+    async with aiosqlite.connect(get_db_path()) as db:
+        db.row_factory = aiosqlite.Row
+        cursor = await db.execute(
+            """
+            SELECT * FROM affiliate_channels
+            WHERE status = 'approved' AND pending_balance_stars >= ?
+            ORDER BY pending_balance_stars DESC
+            """,
+            (min_balance_stars,),
+        )
+        rows = await cursor.fetchall()
+        return [dict(row) for row in rows]
+
+
+async def create_payout_record(
+    affiliate_channel_id: int,
+    total_stars: int,
+    commission_ids: list[int],
+) -> int:
+    """Create a payout record and mark commissions as paid."""
+    async with aiosqlite.connect(get_db_path()) as db:
+        # Create payout record
+        await db.execute(
+            """
+            INSERT INTO affiliate_payouts
+            (affiliate_channel_id, total_stars, commission_count)
+            VALUES (?, ?, ?)
+            """,
+            (affiliate_channel_id, total_stars, len(commission_ids)),
+        )
+
+        # Get payout ID
+        cursor = await db.execute(
+            "SELECT id FROM affiliate_payouts WHERE affiliate_channel_id = ? ORDER BY id DESC LIMIT 1",
+            (affiliate_channel_id,),
+        )
+        payout_id = (await cursor.fetchone())[0]
+
+        # Mark commissions as paid
+        for commission_id in commission_ids:
+            await db.execute(
+                """
+                UPDATE affiliate_commissions
+                SET status = 'paid', payout_id = ?, paid_at = datetime('now')
+                WHERE id = ?
+                """,
+                (payout_id, commission_id),
+            )
+
+        # Reset pending balance
+        await db.execute(
+            """
+            UPDATE affiliate_channels
+            SET pending_balance_stars = 0, updated_at = datetime('now')
+            WHERE id = ?
+            """,
+            (affiliate_channel_id,),
+        )
+
+        await db.commit()
+        return payout_id
+
+
+async def complete_payout(
+    payout_id: int,
+    telegram_payment_id: str,
+) -> bool:
+    """Mark a payout as completed."""
+    async with aiosqlite.connect(get_db_path()) as db:
+        await db.execute(
+            """
+            UPDATE affiliate_payouts
+            SET status = 'completed', telegram_payment_id = ?, completed_at = datetime('now')
+            WHERE id = ?
+            """,
+            (telegram_payment_id, payout_id),
+        )
+        await db.commit()
+        return True
+
+
+async def create_affiliate_invite(invite_token: str, expires_at: str) -> int:
+    """Create an invite token for affiliate signup."""
+    async with aiosqlite.connect(get_db_path()) as db:
+        await db.execute(
+            """
+            INSERT INTO affiliate_invites (invite_token, expires_at)
+            VALUES (?, ?)
+            """,
+            (invite_token, expires_at),
+        )
+        await db.commit()
+
+        cursor = await db.execute(
+            "SELECT id FROM affiliate_invites WHERE invite_token = ?",
+            (invite_token,),
+        )
+        row = await cursor.fetchone()
+        return row[0] if row else -1
+
+
+async def get_affiliate_invite(invite_token: str) -> dict | None:
+    """Get invite record by token."""
+    async with aiosqlite.connect(get_db_path()) as db:
+        db.row_factory = aiosqlite.Row
+        cursor = await db.execute(
+            "SELECT * FROM affiliate_invites WHERE invite_token = ? AND is_used = 0",
+            (invite_token,),
+        )
+        row = await cursor.fetchone()
+        return dict(row) if row else None
+
+
+async def mark_invite_used(invite_token: str, telegram_user_id: int) -> bool:
+    """Mark an invite as used."""
+    async with aiosqlite.connect(get_db_path()) as db:
+        await db.execute(
+            """
+            UPDATE affiliate_invites
+            SET is_used = 1, used_by_telegram_id = ?, used_at = datetime('now')
+            WHERE invite_token = ?
+            """,
+            (telegram_user_id, invite_token),
+        )
+        await db.commit()
+        return True

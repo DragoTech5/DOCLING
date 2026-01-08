@@ -6,6 +6,7 @@ import { TIER_LIMITS, type SubscriptionTier } from '@/types'
 import { hapticFeedback, showBackButton, hideBackButton, showAlert } from '@/lib/telegram'
 import BottomNav from '@/components/BottomNav'
 import PaymentMethodSelector from '@/components/PaymentMethodSelector'
+import AffiliateDashboardCard from '@/components/AffiliateDashboardCard'
 import { clsx } from 'clsx'
 import { SHOW_DOCUMENT_LIMITS, SUPPORT_EMAIL_URL } from '@/config/features'
 
@@ -36,8 +37,47 @@ export default function PricingPage() {
   const { profile } = useAuthStore()
   const { subscribe, isProcessing } = useSubscriptionStore()
   const [selectedTierForPayment, setSelectedTierForPayment] = useState<SubscriptionTier | null>(null)
+  const [affiliateData, setAffiliateData] = useState<any>(null)
+  const [isAffiliate, setIsAffiliate] = useState(false)
 
   const currentTier = profile?.tier || 'free'
+
+  // Fetch affiliate status and dashboard data
+  useEffect(() => {
+    const fetchAffiliateData = async () => {
+      try {
+        // Check affiliate status
+        const statusResponse = await fetch('/api/telegram/affiliate/status', {
+          headers: {
+            'X-Telegram-Init-Data': (window as any).Telegram.WebApp.initData,
+          },
+        })
+
+        const statusData = await statusResponse.json()
+
+        if (statusData.is_affiliate && statusData.status === 'approved') {
+          setIsAffiliate(true)
+
+          // Fetch dashboard data
+          const dashboardResponse = await fetch('/api/telegram/affiliate/dashboard', {
+            headers: {
+              'X-Telegram-Init-Data': (window as any).Telegram.WebApp.initData,
+            },
+          })
+
+          const dashboardData = await dashboardResponse.json()
+          setAffiliateData(dashboardData)
+        } else {
+          setIsAffiliate(false)
+        }
+      } catch (error) {
+        console.error('Error fetching affiliate data:', error)
+        setIsAffiliate(false)
+      }
+    }
+
+    fetchAffiliateData()
+  }, [])
 
   // Setup back button
   useEffect(() => {
@@ -95,6 +135,11 @@ export default function PricingPage() {
 
       {/* Content */}
       <main className="flex-1 px-4 py-4 space-y-4">
+        {/* Affiliate Dashboard - only show for approved affiliates */}
+        {isAffiliate && affiliateData && (
+          <AffiliateDashboardCard data={affiliateData} />
+        )}
+
         {/* Subscription Plans */}
         {tierOrder.map((tier) => {
           const info = TIER_LIMITS[tier]

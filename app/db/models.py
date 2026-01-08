@@ -231,6 +231,75 @@ class AnalyticsConversionFunnelRecord(TypedDict):
     updated_at: str
 
 
+class AffiliateChannelRecord(TypedDict):
+    id: int
+    telegram_user_id: int
+    channel_id: int
+    channel_username: str | None
+    channel_title: str
+    subscriber_count: int | None
+    last_post_date: str | None
+    status: str
+    referral_code: str | None
+    total_referrals: int
+    total_conversions: int
+    total_earnings_stars: int
+    pending_balance_stars: int
+    reviewed_by_telegram_id: int | None
+    review_notes: str | None
+    reviewed_at: str | None
+    created_at: str
+    updated_at: str
+
+
+class AffiliateReferralRecord(TypedDict):
+    id: int
+    affiliate_channel_id: int
+    referred_user_id: int
+    referral_code_used: str
+    has_converted: int
+    first_purchase_at: str | None
+    total_commission_stars: int
+    created_at: str
+
+
+class AffiliateCommissionRecord(TypedDict):
+    id: int
+    affiliate_channel_id: int
+    referral_id: int
+    payment_id: int | None
+    tier: str
+    sale_amount_stars: int
+    commission_amount_stars: int
+    commission_rate: float
+    status: str
+    payout_id: int | None
+    paid_at: str | None
+    created_at: str
+
+
+class AffiliatePayoutRecord(TypedDict):
+    id: int
+    affiliate_channel_id: int
+    total_stars: int
+    commission_count: int
+    telegram_payment_id: str | None
+    status: str
+    error_message: str | None
+    created_at: str
+    completed_at: str | None
+
+
+class AffiliateInviteRecord(TypedDict):
+    id: int
+    invite_token: str
+    is_used: int
+    used_by_telegram_id: int | None
+    used_at: str | None
+    expires_at: str
+    created_at: str
+
+
 # Subscription tier constants
 SubscriptionTier = Literal["free", "starter", "pro", "unlimited", "business", "enterprise", "scholar", "researcher"]
 
@@ -772,6 +841,92 @@ CREATE TRIGGER IF NOT EXISTS update_dodo_payments_timestamp
     BEGIN
         UPDATE dodo_payments SET created_at = created_at WHERE id = NEW.id;
     END;
+
+-- Affiliate channel registrations
+CREATE TABLE IF NOT EXISTS affiliate_channels (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    telegram_user_id INTEGER NOT NULL REFERENCES telegram_users(id) ON DELETE CASCADE,
+    channel_id INTEGER NOT NULL UNIQUE,
+    channel_username TEXT,
+    channel_title TEXT NOT NULL,
+    subscriber_count INTEGER,
+    last_post_date TEXT,
+    status TEXT NOT NULL DEFAULT 'pending_info' CHECK (
+        status IN ('pending_info', 'pending_review', 'approved', 'rejected', 'suspended')
+    ),
+    referral_code TEXT UNIQUE,
+    total_referrals INTEGER DEFAULT 0,
+    total_conversions INTEGER DEFAULT 0,
+    total_earnings_stars INTEGER DEFAULT 0,
+    pending_balance_stars INTEGER DEFAULT 0,
+    reviewed_by_telegram_id INTEGER,
+    review_notes TEXT,
+    reviewed_at TEXT,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+-- Referral signup tracking
+CREATE TABLE IF NOT EXISTS affiliate_referrals (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    affiliate_channel_id INTEGER NOT NULL REFERENCES affiliate_channels(id) ON DELETE CASCADE,
+    referred_user_id INTEGER NOT NULL UNIQUE REFERENCES telegram_users(id) ON DELETE CASCADE,
+    referral_code_used TEXT NOT NULL,
+    has_converted INTEGER DEFAULT 0,
+    first_purchase_at TEXT,
+    total_commission_stars INTEGER DEFAULT 0,
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+-- Commission records per subscription
+CREATE TABLE IF NOT EXISTS affiliate_commissions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    affiliate_channel_id INTEGER NOT NULL REFERENCES affiliate_channels(id) ON DELETE CASCADE,
+    referral_id INTEGER NOT NULL REFERENCES affiliate_referrals(id) ON DELETE CASCADE,
+    payment_id INTEGER REFERENCES payment_history(id) ON DELETE SET NULL,
+    tier TEXT NOT NULL,
+    sale_amount_stars INTEGER NOT NULL,
+    commission_amount_stars INTEGER NOT NULL,
+    commission_rate REAL NOT NULL DEFAULT 0.20,
+    status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'paid', 'cancelled')),
+    payout_id INTEGER,
+    paid_at TEXT,
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+-- Payout history
+CREATE TABLE IF NOT EXISTS affiliate_payouts (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    affiliate_channel_id INTEGER NOT NULL REFERENCES affiliate_channels(id) ON DELETE CASCADE,
+    total_stars INTEGER NOT NULL,
+    commission_count INTEGER NOT NULL,
+    telegram_payment_id TEXT,
+    status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'completed', 'failed')),
+    error_message TEXT,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    completed_at TEXT
+);
+
+-- Invite tokens for admin-controlled onboarding
+CREATE TABLE IF NOT EXISTS affiliate_invites (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    invite_token TEXT NOT NULL UNIQUE,
+    is_used INTEGER DEFAULT 0,
+    used_by_telegram_id INTEGER,
+    used_at TEXT,
+    expires_at TEXT,
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+-- Affiliate table indexes
+CREATE INDEX IF NOT EXISTS idx_affiliate_channels_status ON affiliate_channels(status);
+CREATE INDEX IF NOT EXISTS idx_affiliate_channels_referral ON affiliate_channels(referral_code);
+CREATE INDEX IF NOT EXISTS idx_affiliate_channels_user ON affiliate_channels(telegram_user_id);
+CREATE INDEX IF NOT EXISTS idx_affiliate_referrals_channel ON affiliate_referrals(affiliate_channel_id);
+CREATE INDEX IF NOT EXISTS idx_affiliate_referrals_user ON affiliate_referrals(referred_user_id);
+CREATE INDEX IF NOT EXISTS idx_affiliate_commissions_channel ON affiliate_commissions(affiliate_channel_id);
+CREATE INDEX IF NOT EXISTS idx_affiliate_commissions_status ON affiliate_commissions(status);
+CREATE INDEX IF NOT EXISTS idx_affiliate_payouts_channel ON affiliate_payouts(affiliate_channel_id);
 """
 
 # Default categories

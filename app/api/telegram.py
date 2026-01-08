@@ -15,6 +15,8 @@ import json
 import logging
 import os
 import pathlib
+import re
+import secrets
 from datetime import datetime, timedelta
 from typing import Annotated, Optional
 
@@ -1867,6 +1869,178 @@ async def handle_webhook(request: Request):
         text = message.get("text", "")
         chat_id = message["chat"]["id"]
         user_data = message.get("from", {})
+        telegram_id = user_data.get("id")
+
+        # ===== AFFILIATE SYSTEM HANDLERS =====
+
+        # Handle forwarded message (for channel verification)
+        if "forward_from_chat" in message:
+            forward_info = message["forward_from_chat"]
+
+            # Only accept channels
+            if forward_info.get("type") != "channel":
+                await send_bot_message(bot_token, chat_id,
+                    "❌ Please forward a message from a CHANNEL, not a group."
+                )
+                return JSONResponse({"ok": True})
+
+            # Check if user already has pending/approved affiliate channel
+            existing = await tg_repo.get_affiliate_channel_by_user(telegram_id)
+            if existing:
+                await send_bot_message(bot_token, chat_id,
+                    f"You already have a registered channel: {existing['channel_title']}"
+                )
+                return JSONResponse({"ok": True})
+
+            # Extract channel info
+            channel_id = forward_info["id"]
+            channel_title = forward_info["title"]
+            channel_username = forward_info.get("username")
+
+            # Create affiliate channel record
+            try:
+                affiliate_id = await tg_repo.create_affiliate_channel_from_forward(
+                    telegram_user_id=telegram_id,
+                    channel_id=channel_id,
+                    channel_username=channel_username,
+                    channel_title=channel_title,
+                )
+
+                await send_bot_message(bot_token, chat_id,
+                    f"✅ Channel detected: {channel_title}\n\n"
+                    f"Now please reply with your channel info in this format:\n\n"
+                    f"Subscribers: [number]\n"
+                    f"Last post: [YYYY-MM-DD]\n\n"
+                    f"Example:\n"
+                    f"Subscribers: 1500\n"
+                    f"Last post: 2026-01-01"
+                )
+            except Exception as e:
+                logger.error(f"Failed to create affiliate channel: {e}")
+                await send_bot_message(bot_token, chat_id,
+                    "❌ Error registering channel. Please try again."
+                )
+            return JSONResponse({"ok": True})
+
+        # Handle subscriber info submission
+        if "Subscribers:" in text and "Last post:" in text:
+            affiliate = await tg_repo.get_affiliate_channel_by_user(telegram_id)
+            if not affiliate or affiliate["status"] not in ["pending_info", "pending_review"]:
+                await send_bot_message(bot_token, chat_id,
+                    "Please forward a channel message first."
+                )
+                return JSONResponse({"ok": True})
+
+            # Parse subscriber info
+            sub_match = re.search(r'Subscribers:\s*(\d+)', text)
+            date_match = re.search(r'Last post:\s*(\d{4}-\d{2}-\d{2})', text)
+
+            if not (sub_match and date_match):
+                await send_bot_message(bot_token, chat_id,
+                    "❌ Invalid format. Please use:\nSubscribers: [number]\nLast post: YYYY-MM-DD"
+                )
+                return JSONResponse({"ok": True})
+
+            subscriber_count = int(sub_match.group(1))
+            last_post_date = date_match.group(1)
+
+            # Validate minimum 500 subscribers
+            if subscriber_count < 500:
+                await send_bot_message(bot_token, chat_id,
+                    f"❌ Sorry, you need at least 500 subscribers. You have {subscriber_count:,}."
+                )
+                return JSONResponse({"ok": True})
+
+            # Update affiliate channel
+            try:
+                await tg_repo.update_affiliate_channel_info(
+                    affiliate_channel_id=affiliate["id"],
+                    subscriber_count=subscriber_count,
+                    last_post_date=last_post_date,
+                )
+
+                await send_bot_message(bot_token, chat_id,
+                    "✅ Application submitted!\n\n"
+                    f"Channel: {affiliate['channel_title']}\n"
+                    f"Subscribers: {subscriber_count:,}\n"
+                    f"Last post: {last_post_date}\n\n"
+                    "An admin will review within 24-48 hours."
+                )
+
+                # Notify admin
+                admin_id = os.getenv("ADMIN_TELEGRAM_ID")
+                if admin_id:
+                    await send_bot_message(bot_token, int(admin_id),
+                        f"🆕 New affiliate application\n\n"
+                        f"Channel: {affiliate['channel_title']}\n"
+                        f"Subscribers: {subscriber_count:,}\n"
+                        f"Username: @{affiliate['channel_username']}\n"
+                        f"Last post: {last_post_date}\n\n"
+                        f"Review: /approve_affiliate {affiliate['id']}"
+                    )
+            except Exception as e:
+                logger.error(f"Failed to update affiliate info: {e}")
+                await send_bot_message(bot_token, chat_id,
+                    "❌ Error processing application. Please try again."
+                )
+            return JSONResponse({"ok": True})
+
+        # Handle /start aff_TOKEN (affiliate invite)
+        if text.startswith("/start aff_"):
+            invite_token = text.replace("/start aff_", "").strip()
+
+            try:
+                # Validate invite token
+                invite = await tg_repo.get_affiliate_invite(invite_token)
+                if not invite:
+                    await send_bot_message(bot_token, chat_id,
+                        "❌ Invalid or expired invite link."
+                    )
+                    return JSONResponse({"ok": True})
+
+                # Mark invite as used
+                await tg_repo.mark_invite_used(invite_token, telegram_id)
+
+                await send_bot_message(bot_token, chat_id,
+                    "🎯 Welcome to the Affiliate Program!\n\n"
+                    "To verify your channel ownership:\n"
+                    "1. Forward ANY message from your channel to me\n"
+                    "2. I'll extract your channel info\n"
+                    "3. Provide subscriber count and last post date\n"
+                    "4. Admin will review within 24-48h\n\n"
+                    "Ready? Forward a message from your channel now 👇"
+                )
+            except Exception as e:
+                logger.error(f"Failed to process affiliate invite: {e}")
+                await send_bot_message(bot_token, chat_id,
+                    "❌ Error processing invite. Please try again."
+                )
+            return JSONResponse({"ok": True})
+
+        # Handle /start ref_CODE (referral signup)
+        if text.startswith("/start ref_"):
+            referral_code = text.replace("/start ref_", "").strip()
+
+            try:
+                # Find affiliate and create referral
+                affiliate = await tg_repo.get_affiliate_channel_by_referral_code(referral_code)
+
+                if affiliate and affiliate["status"] == "approved":
+                    # Check if user already referred
+                    existing = await tg_repo.get_referral_by_user(telegram_id)
+                    if not existing:
+                        # Create referral record
+                        await tg_repo.create_referral(
+                            affiliate_channel_id=affiliate["id"],
+                            referred_user_id=telegram_id,
+                            referral_code=referral_code,
+                        )
+            except Exception as e:
+                logger.error(f"Failed to process referral: {e}")
+            # Continue with normal welcome flow
+            return JSONResponse({"ok": True})
+
+        # ===== END AFFILIATE HANDLERS =====
 
         if text.startswith("/start"):
             await send_bot_message(bot_token, chat_id,
@@ -1958,13 +2132,51 @@ async def handle_successful_payment(telegram_id: int, payment: dict):
             await tg_repo.create_subscription(user_id, tier, charge_id)
 
             # Create payment record
-            await tg_repo.create_payment_record(
+            payment_record = await tg_repo.create_payment_record(
                 telegram_user_id=user_id,
                 payment_type="subscription",
                 amount_stars=amount,
                 telegram_payment_charge_id=charge_id,
                 tier=tier,
             )
+
+            # ===== AFFILIATE COMMISSION TRACKING =====
+            try:
+                referral = await tg_repo.get_referral_by_user(telegram_id)
+                if referral:
+                    # Calculate 20% commission
+                    commission_stars = int(amount * 0.20)
+
+                    # Get the payment record ID (get_payment_record_id method or fallback)
+                    # Since we don't have direct access to payment_record ID, fetch it
+                    payment_records = await tg_repo.get_payment_history(user_id, limit=1)
+                    if payment_records:
+                        payment_id = payment_records[0]["id"]
+
+                        # Create commission record
+                        await tg_repo.create_commission(
+                            affiliate_channel_id=referral["affiliate_channel_id"],
+                            referral_id=referral["id"],
+                            payment_id=payment_id,
+                            tier=tier,
+                            sale_amount_stars=amount,
+                            commission_amount_stars=commission_stars,
+                        )
+
+                        # Add to affiliate's pending balance
+                        await tg_repo.add_to_affiliate_balance(
+                            affiliate_channel_id=referral["affiliate_channel_id"],
+                            amount_stars=commission_stars,
+                        )
+
+                        # Mark referral as converted (first purchase)
+                        if not referral["has_converted"]:
+                            await tg_repo.mark_referral_converted(referral["id"])
+
+                        logger.info(f"Commission created: {commission_stars} stars for affiliate {referral['affiliate_channel_id']}")
+            except Exception as e:
+                logger.error(f"Failed to track affiliate commission: {e}")
+            # ===== END AFFILIATE COMMISSION TRACKING =====
 
             # Track subscription purchase (non-blocking)
             await analytics_service.track_subscription_purchase(
@@ -1993,3 +2205,92 @@ async def handle_successful_payment(telegram_id: int, payment: dict):
 
     except Exception as e:
         print(f"Payment processing error: {e}")
+
+
+# ============================================================================
+# AFFILIATE ENDPOINTS FOR USERS
+# ============================================================================
+
+
+@router.get("/affiliate/status")
+async def get_affiliate_status(
+    user: Annotated[TelegramUser, Depends(get_current_telegram_user)] = None,
+):
+    """
+    Check if current user is an approved affiliate.
+    Returns: is_affiliate flag, status, and referral_code if applicable.
+    """
+    try:
+        affiliate = await tg_repo.get_affiliate_channel_by_user(user.telegram_id)
+
+        if not affiliate:
+            return {
+                "is_affiliate": False,
+                "status": None,
+                "referral_code": None,
+            }
+
+        return {
+            "is_affiliate": True,
+            "status": affiliate["status"],
+            "referral_code": affiliate.get("referral_code") if affiliate["status"] == "approved" else None,
+            "channel_title": affiliate["channel_title"],
+        }
+    except Exception as e:
+        logger.error(f"Error getting affiliate status: {e}")
+        return {
+            "is_affiliate": False,
+            "error": str(e),
+        }
+
+
+@router.get("/affiliate/dashboard")
+async def get_affiliate_dashboard(
+    user: Annotated[TelegramUser, Depends(get_current_telegram_user)] = None,
+):
+    """
+    Get affiliate dashboard data (stats, earnings, payout info).
+    Only available to approved affiliates.
+    """
+    try:
+        affiliate = await tg_repo.get_affiliate_channel_by_user(user.telegram_id)
+
+        if not affiliate or affiliate["status"] != "approved":
+            raise HTTPException(
+                status_code=403,
+                detail="User is not an approved affiliate",
+            )
+
+        # Get dashboard data
+        data = await tg_repo.get_affiliate_dashboard_data(affiliate["id"])
+
+        # Construct referral link
+        referral_url = f"https://t.me/AkashaAIHub_bot?start=ref_{affiliate['referral_code']}"
+
+        return {
+            "overview": {
+                "totalReferrals": data["total_referrals"],
+                "totalConversions": data["total_conversions"],
+                "conversionRate": data["conversion_rate"],
+                "totalEarnings": data["total_earnings_stars"],
+                "pendingBalance": data["pending_balance_stars"],
+            },
+            "referralLink": referral_url,
+            "nextPayout": {
+                "estimatedDate": "1st of next month",
+                "estimatedAmount": data["pending_balance_stars"],
+                "minThreshold": 2000,
+            },
+            "channelInfo": {
+                "title": data["channel_title"],
+                "referralCode": data["referral_code"],
+            },
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error getting affiliate dashboard: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error retrieving dashboard: {str(e)}",
+        )
