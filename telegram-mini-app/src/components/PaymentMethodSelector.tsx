@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import type { SubscriptionTier } from '@/types'
 import { TIER_LIMITS } from '@/types'
 import { hapticFeedback, showBackButton, hideBackButton } from '@/lib/telegram'
+import { SUPPORT_EMAIL_URL } from '@/config/features'
 import { clsx } from 'clsx'
 
 interface PaymentMethodSelectorProps {
@@ -244,9 +245,18 @@ export default function PaymentMethodSelector({
             </div>
           </div>
 
-          <p className="text-xs text-gray-500 text-center leading-relaxed">
+          <p className="text-xs text-gray-500 text-center leading-relaxed mb-4">
             Your payment is processed securely. Subscription renews automatically—cancel anytime from your settings.
           </p>
+
+          <div className="pt-3 border-t border-gray-800/30 text-center">
+            <p className="text-xs text-gray-500">
+              Questions?{' '}
+              <a href={SUPPORT_EMAIL_URL} className="text-gray-400 hover:text-gray-300 underline transition-colors">
+                contact support@cyvril.com
+              </a>
+            </p>
+          </div>
         </div>
       </div>
 

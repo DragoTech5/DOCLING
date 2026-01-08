@@ -295,9 +295,8 @@ export default function PricingPage() {
             </svg>
             <div className="flex-1 min-w-0">
               <p className="text-xs text-gray-400">
-                Questions about pricing?{' '}
-                <a href={SUPPORT_EMAIL_URL} className="text-gray-300 hover:text-gray-200 underline transition-colors">
-                  Contact support
+                <a href={SUPPORT_EMAIL_URL} className="text-gray-300 hover:text-gray-200 transition-colors">
+                  contact support@cyvril.com
                 </a>
               </p>
             </div>
