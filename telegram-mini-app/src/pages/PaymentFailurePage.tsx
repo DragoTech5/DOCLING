@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { hapticFeedback } from '@/lib/telegram'
+import { SUPPORT_EMAIL, SUPPORT_EMAIL_URL } from '@/config/features'
 
 export default function PaymentFailurePage() {
   const navigate = useNavigate()
@@ -69,9 +70,10 @@ export default function PaymentFailurePage() {
         </div>
 
         {/* Support text */}
-        <p className="text-xs text-gray-600 pt-2">
-          If the problem persists, try a different payment method or contact support.
-        </p>
+        <div className="text-xs text-gray-600 pt-4 space-y-2">
+          <p>If the problem persists, try a different payment method.</p>
+          <p>Need help? <a href={SUPPORT_EMAIL_URL} className="text-red-400 hover:text-red-300 underline font-medium">Contact support at {SUPPORT_EMAIL}</a></p>
+        </div>
       </div>
     </div>
   )

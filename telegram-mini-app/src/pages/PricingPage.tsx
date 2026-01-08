@@ -7,7 +7,7 @@ import { hapticFeedback, showBackButton, hideBackButton, showAlert } from '@/lib
 import BottomNav from '@/components/BottomNav'
 import PaymentMethodSelector from '@/components/PaymentMethodSelector'
 import { clsx } from 'clsx'
-import { SHOW_DOCUMENT_LIMITS } from '@/config/features'
+import { SHOW_DOCUMENT_LIMITS, SUPPORT_EMAIL, SUPPORT_EMAIL_URL } from '@/config/features'
 
 const tierOrder: SubscriptionTier[] = ['free', 'starter', 'pro', 'unlimited']
 
@@ -286,6 +286,38 @@ export default function PricingPage() {
             </div>
           </div>
         )}
+
+        {/* Support Contact Section */}
+        <div className="bg-gradient-to-br from-dark-200 to-dark-300 rounded-xl p-4 border border-cyan-500/20 overflow-hidden relative">
+          {/* Subtle gradient background */}
+          <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/5 to-transparent pointer-events-none" />
+
+          <div className="relative">
+            <div className="flex items-start gap-3 mb-3">
+              <div className="flex-shrink-0 pt-0.5">
+                <svg className="w-5 h-5 text-cyan-400" fill="currentColor" viewBox="0 0 20 20">
+                  <path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z" />
+                  <path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z" />
+                </svg>
+              </div>
+              <div className="flex-1 min-w-0">
+                <h3 className="text-sm font-semibold text-gray-100 mb-1">Need Help?</h3>
+                <p className="text-xs text-gray-500 mb-3">
+                  Questions about plans or having issues? We're here to support you.
+                </p>
+                <a
+                  href={SUPPORT_EMAIL_URL}
+                  className="inline-flex items-center gap-2 px-3 py-2 bg-cyan-500/20 hover:bg-cyan-500/30 border border-cyan-500/40 rounded-lg transition-colors"
+                >
+                  <svg className="w-4 h-4 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                  </svg>
+                  <span className="text-xs font-medium text-cyan-300">{SUPPORT_EMAIL}</span>
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
       </main>
 
       <BottomNav />
