@@ -1278,9 +1278,21 @@ async def get_affiliate_dashboard_data(affiliate_channel_id: int) -> dict:
         )
         channel = dict(await cursor.fetchone())
 
-        # Get conversion rate
-        total_referrals = channel["total_referrals"]
-        total_conversions = channel["total_conversions"]
+        # Count actual referrals (not just stored counter)
+        cursor = await db.execute(
+            "SELECT COUNT(*) FROM affiliate_referrals WHERE affiliate_channel_id = ?",
+            (affiliate_channel_id,),
+        )
+        total_referrals = (await cursor.fetchone())[0]
+
+        # Count conversions (referrals with has_converted = 1)
+        cursor = await db.execute(
+            "SELECT COUNT(*) FROM affiliate_referrals WHERE affiliate_channel_id = ? AND has_converted = 1",
+            (affiliate_channel_id,),
+        )
+        total_conversions = (await cursor.fetchone())[0]
+
+        # Calculate conversion rate
         conversion_rate = (total_conversions / total_referrals * 100) if total_referrals > 0 else 0
 
         return {
