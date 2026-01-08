@@ -72,8 +72,6 @@ export default function SharePage() {
   const [error, setError] = useState<string | null>(null)
   const [selectedSource, setSelectedSource] = useState<Source | null>(null)
   const [documentInfo, setDocumentInfo] = useState<{ id: string; title: string; author?: string; cover_url?: string } | null>(null)
-  const [downloadLoading, setDownloadLoading] = useState(false)
-  const [chatLoading, setChatLoading] = useState(false)
 
   // Fetch shared conversation
   useEffect(() => {
@@ -136,122 +134,22 @@ export default function SharePage() {
     fetchSharedConversation()
   }, [shareToken])
 
-  // Handle downloading source document
-  const handleDownloadSourceDocument = async () => {
+  // Handle downloading source document - redirect unauthenticated users to Telegram bot
+  const handleDownloadSourceDocument = () => {
     if (!selectedSource?.document_id) return
 
-    setDownloadLoading(true)
-
-    try {
-      const documentId = selectedSource.document_id
-
-      // Check if download is valid by making a test request
-      const headResponse = await fetch(`/api/telegram/download/${documentId}`, {
-        method: 'GET',
-        headers: {
-          'X-Telegram-Init-Data': window.Telegram?.WebApp?.initData || '',
-        },
-      })
-
-      // Handle non-OK responses
-      if (!headResponse.ok) {
-        let errorMessage = 'Download failed. Please try again.'
-
-        if (headResponse.status === 401) {
-          // Not authenticated - redirect to Telegram
-          window.Telegram?.WebApp?.openLink('https://web.telegram.org/k/#@AkashaAIHub_bot')
-          return
-        } else if (headResponse.status === 429) {
-          try {
-            const errorData = await headResponse.json()
-            if (errorData.detail && typeof errorData.detail === 'string') {
-              const errorDetail = JSON.parse(errorData.detail)
-              if (errorDetail.code === 'download_quota_exhausted') {
-                const tierName = errorDetail.tier.charAt(0).toUpperCase() + errorDetail.tier.slice(1)
-                errorMessage = `⏰ Daily download limit reached!\n\nYou've used all ${tierName} plan downloads for today.\n\nUpgrade to a higher plan for more downloads.`
-              }
-            }
-          } catch (e) {
-            errorMessage = '⏰ Daily download limit reached. Upgrade your plan for more downloads.'
-          }
-        } else if (headResponse.status === 404) {
-          errorMessage = 'PDF file not found on server. Contact support if this persists.'
-        } else if (headResponse.status === 500) {
-          errorMessage = 'Server error. Please try again later.'
-        }
-
-        alert(errorMessage)
-        setDownloadLoading(false)
-        return
-      }
-
-      // Use Telegram.WebApp.openLink() to trigger download
-      const downloadUrl = `/api/telegram/download/${documentId}`
-
-      if (window.Telegram?.WebApp?.openLink) {
-        window.Telegram.WebApp.openLink(downloadUrl)
-
-        try {
-          window.Telegram.WebApp.showAlert(`✅ Download starting: ${selectedSource.title}.pdf`)
-          window.Telegram.WebApp.HapticFeedback?.notificationOccurred('success')
-        } catch (e) {
-          console.log('Telegram alert unavailable')
-        }
-
-        setSelectedSource(null)
-      } else {
-        throw new Error('Telegram WebApp openLink is not available.')
-      }
-    } catch (err) {
-      const errorMsg = err instanceof Error ? err.message : 'Download error'
-      alert(`Download failed: ${errorMsg}`)
-    } finally {
-      setDownloadLoading(false)
-    }
+    // Immediately redirect to Telegram bot - unauthenticated users need to sign up/log in
+    window.open('https://web.telegram.org/k/#@AkashaAIHub_bot', '_blank')
+    setSelectedSource(null)
   }
 
-  // Handle chat with source document
-  const handleChatWithSourceDocument = async () => {
+  // Handle chat with source document - redirect unauthenticated users to Telegram bot
+  const handleChatWithSourceDocument = () => {
     if (!selectedSource?.document_id) return
 
-    setChatLoading(true)
-
-    try {
-      const response = await fetch('/api/telegram/conversations', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Telegram-Init-Data': window.Telegram?.WebApp?.initData || '',
-        },
-        body: JSON.stringify({
-          pdf_ids: [selectedSource.document_id],
-        }),
-      })
-
-      if (!response.ok) {
-        if (response.status === 401) {
-          // Not authenticated - redirect to Telegram
-          window.Telegram?.WebApp?.openLink('https://web.telegram.org/k/#@AkashaAIHub_bot')
-          return
-        }
-
-        const errorData = await response.json().catch(() => ({}))
-        alert(errorData.detail || 'Failed to create conversation. Please try again.')
-        return
-      }
-
-      const data = await response.json()
-      const conversation = data.conversation || data
-
-      // Redirect to new conversation
-      navigate(`/chat?conversationId=${conversation.id}&docs=${selectedSource.document_id}`)
-      setSelectedSource(null)
-    } catch (err) {
-      const errorMsg = err instanceof Error ? err.message : 'Failed to create conversation'
-      alert(`Failed to create chat: ${errorMsg}`)
-    } finally {
-      setChatLoading(false)
-    }
+    // Immediately redirect to Telegram bot - unauthenticated users need to sign up/log in
+    window.open('https://web.telegram.org/k/#@AkashaAIHub_bot', '_blank')
+    setSelectedSource(null)
   }
 
   if (loading) {
@@ -675,7 +573,6 @@ export default function SharePage() {
                 {/* Download PDF Button */}
                 <button
                   onClick={handleDownloadSourceDocument}
-                  disabled={downloadLoading || chatLoading}
                   style={{
                     flex: 1,
                     padding: '10px 12px',
@@ -683,9 +580,9 @@ export default function SharePage() {
                     fontSize: '13px',
                     fontWeight: '500',
                     border: 'none',
-                    cursor: downloadLoading || chatLoading ? 'not-allowed' : 'pointer',
-                    backgroundColor: downloadLoading || chatLoading ? 'rgba(107, 114, 128, 0.2)' : 'rgba(34, 197, 94, 0.2)',
-                    color: downloadLoading || chatLoading ? '#9ca3af' : '#86efac',
+                    cursor: 'pointer',
+                    backgroundColor: 'rgba(34, 197, 94, 0.2)',
+                    color: '#86efac',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
@@ -693,38 +590,21 @@ export default function SharePage() {
                     transition: 'all 0.2s',
                   }}
                   onMouseEnter={(e) => {
-                    if (!downloadLoading && !chatLoading) {
-                      (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'rgba(34, 197, 94, 0.3)'
-                    }
+                    (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'rgba(34, 197, 94, 0.3)'
                   }}
                   onMouseLeave={(e) => {
-                    if (!downloadLoading && !chatLoading) {
-                      (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'rgba(34, 197, 94, 0.2)'
-                    }
+                    (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'rgba(34, 197, 94, 0.2)'
                   }}
                 >
-                  {downloadLoading ? (
-                    <>
-                      <svg style={{ width: '14px', height: '14px', animation: 'spin 1s linear infinite' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" fill="none" opacity="0.3" />
-                        <path strokeLinecap="round" d="M12 2a10 10 0 0 1 10 10" strokeWidth="2" />
-                      </svg>
-                      <span>Downloading...</span>
-                    </>
-                  ) : (
-                    <>
-                      <svg style={{ width: '14px', height: '14px' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                      </svg>
-                      <span>Download</span>
-                    </>
-                  )}
+                  <svg style={{ width: '14px', height: '14px' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                  </svg>
+                  <span>Download</span>
                 </button>
 
                 {/* Chat with This Book Button */}
                 <button
                   onClick={handleChatWithSourceDocument}
-                  disabled={downloadLoading || chatLoading}
                   style={{
                     flex: 1,
                     padding: '10px 12px',
@@ -732,9 +612,9 @@ export default function SharePage() {
                     fontSize: '13px',
                     fontWeight: '500',
                     border: 'none',
-                    cursor: downloadLoading || chatLoading ? 'not-allowed' : 'pointer',
-                    backgroundColor: downloadLoading || chatLoading ? 'rgba(107, 114, 128, 0.2)' : 'rgba(212, 175, 55, 0.2)',
-                    color: downloadLoading || chatLoading ? '#9ca3af' : '#D4AF37',
+                    cursor: 'pointer',
+                    backgroundColor: 'rgba(212, 175, 55, 0.2)',
+                    color: '#D4AF37',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
@@ -742,32 +622,16 @@ export default function SharePage() {
                     transition: 'all 0.2s',
                   }}
                   onMouseEnter={(e) => {
-                    if (!downloadLoading && !chatLoading) {
-                      (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'rgba(212, 175, 55, 0.3)'
-                    }
+                    (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'rgba(212, 175, 55, 0.3)'
                   }}
                   onMouseLeave={(e) => {
-                    if (!downloadLoading && !chatLoading) {
-                      (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'rgba(212, 175, 55, 0.2)'
-                    }
+                    (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'rgba(212, 175, 55, 0.2)'
                   }}
                 >
-                  {chatLoading ? (
-                    <>
-                      <svg style={{ width: '14px', height: '14px', animation: 'spin 1s linear infinite' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" fill="none" opacity="0.3" />
-                        <path strokeLinecap="round" d="M12 2a10 10 0 0 1 0 20" strokeWidth="2" />
-                      </svg>
-                      <span>Starting...</span>
-                    </>
-                  ) : (
-                    <>
-                      <svg style={{ width: '14px', height: '14px' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-                      </svg>
-                      <span>Chat</span>
-                    </>
-                  )}
+                  <svg style={{ width: '14px', height: '14px' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                  </svg>
+                  <span>Chat</span>
                 </button>
               </div>
             )}
