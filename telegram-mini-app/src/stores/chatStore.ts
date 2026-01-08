@@ -95,7 +95,14 @@ export const useChatStore = create<ChatState>((set, get) => ({
       // CRITICAL: Merge loaded data with current state instead of replacing
       // This preserves streaming messages that are being updated in real-time
       set(state => {
-        if (!state.currentConversation) return { currentConversation: loadedConversation }
+        if (!state.currentConversation) {
+          return {
+            currentConversation: loadedConversation,
+            // IMPORTANT: When loading a conversation, also update selectedPdfIds to match
+            // This ensures document covers display when navigating to conversation from sources
+            selectedPdfIds: loadedConversation.pdfIds || [],
+          }
+        }
 
         // Keep the current messages (which may have streaming content) but update pdfIds
         return {
@@ -106,7 +113,10 @@ export const useChatStore = create<ChatState>((set, get) => ({
             messages: state.currentConversation.messages.length > 0
               ? state.currentConversation.messages
               : loadedConversation.messages || [],
-          }
+          },
+          // IMPORTANT: When loading a conversation, also update selectedPdfIds to match
+          // This ensures document covers display when navigating to conversation from sources
+          selectedPdfIds: loadedConversation.pdfIds || state.selectedPdfIds,
         }
       })
     }
