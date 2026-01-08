@@ -591,6 +591,12 @@ async def chat(
     # Format context and track sources
     context, sources = await format_context_with_sources(chunks)
 
+    # CRITICAL: Only include sources if retrieval confidence is high
+    # If confidence is low (no relevant information found), clear sources
+    # to prevent misleading citations in the response
+    if not confidence.is_confident:
+        sources = []
+
     # Build messages for OpenAI (with confidence-aware system prompt)
     messages = build_messages(
         conversation_history=conversation.get("messages", []),
@@ -679,6 +685,12 @@ async def chat_stream(
 
     # Format context and track sources
     context, sources = await format_context_with_sources(chunks)
+
+    # CRITICAL: Only include sources if retrieval confidence is high
+    # If confidence is low (no relevant information found), clear sources
+    # to prevent misleading citations in the response
+    if not confidence.is_confident:
+        sources = []
 
     # Build messages for OpenAI (with confidence-aware system prompt)
     messages = build_messages(
