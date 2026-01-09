@@ -11,7 +11,6 @@ export default function HistoryPage() {
     conversations,
     isLoadingConversations,
     loadConversations,
-    setCurrentConversation,
     deleteConversation,
     availablePdfs,
   } = useChatStore()
@@ -32,7 +31,8 @@ export default function HistoryPage() {
 
   const handleConversationClick = (conversation: typeof conversations[0]) => {
     hapticFeedback('light')
-    setCurrentConversation(conversation)
+    // Don't set currentConversation here - let ChatPage's useEffect load it via loadFullConversation()
+    // This prevents the partial conversation from the list from overriding the full conversation from server
     navigate(`/chat/${conversation.id}`)
   }
 
